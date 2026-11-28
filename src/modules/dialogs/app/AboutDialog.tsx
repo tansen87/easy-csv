@@ -13,6 +13,10 @@ interface AppInfo {
   tauriVersion: string;
   platform: string;
   arch: string;
+  /** Release name, e.g. "Windows 11 Pro 24H2 (26100.2314)". */
+  osVersion: string;
+  /** WebView2 / WebKit version reported by the webview runtime. */
+  webviewVersion: string;
 }
 
 const PLATFORM_LABELS: Record<string, string> = {
@@ -78,20 +82,37 @@ export function AboutDialog({ isOpen, onClose }: AboutDialogProps) {
 
   if (!isOpen) return null;
 
-  const distribution = info
-    ? `${PLATFORM_LABELS[info.platform] ?? info.platform} · ${
-        ARCH_LABELS[info.arch] ?? info.arch
-      }`
+  const platformLabel = info
+    ? (PLATFORM_LABELS[info.platform] ?? info.platform)
+    : "—";
+  const archLabel = info ? (ARCH_LABELS[info.arch] ?? info.arch) : "—";
+  // Windows ships WebView2, macOS/Linux the system WebKit. The engine name is
+  // the useful half: "158.0.4370.45" alone means nothing in a bug report.
+  const webviewEngine = info?.platform === "windows" ? "WebView2" : "WebKit";
+  const webviewLine = info?.webviewVersion
+    ? `${webviewEngine} ${info.webviewVersion}`
+    : "—";
+  // The OS release already names the platform; keep the bare platform as the
+  // fallback for hosts that cannot report a release.
+  const systemLine = info
+    ? `${info.osVersion || platformLabel} · ${archLabel}`
     : "—";
 
-  const versionLine = info
-    ? `easy-csv ${info.version} · Tauri ${info.tauriVersion} · ${distribution}`
+  // One fact per line: this pastes into a bug report, and a single "·"-joined
+  // string is unreadable there — reviewers scan for the WebView line first.
+  const versionBlock = info
+    ? [
+        `easy-csv ${info.version}`,
+        `Tauri ${info.tauriVersion}`,
+        webviewLine,
+        systemLine,
+      ].join("\n")
     : "";
 
   const handleCopy = () => {
-    if (!versionLine) return;
+    if (!versionBlock) return;
     void navigator.clipboard
-      ?.writeText(versionLine)
+      ?.writeText(versionBlock)
       .then(() => setCopied(true))
       .catch(() => {});
   };
@@ -99,7 +120,8 @@ export function AboutDialog({ isOpen, onClose }: AboutDialogProps) {
   const rows = [
     { label: t.aboutVersion, value: info?.version ?? "—" },
     { label: "Tauri", value: info?.tauriVersion ?? "—" },
-    { label: t.aboutDistribution, value: distribution },
+    { label: t.aboutWebView, value: webviewLine },
+    { label: t.aboutSystem, value: systemLine },
     { label: t.aboutLicense, value: "MIT" },
   ];
 
@@ -131,33 +153,37 @@ export function AboutDialog({ isOpen, onClose }: AboutDialogProps) {
           </Button>
         </div>
 
-        <div className="px-5 pb-4 pt-5">
+        <div className="px-5 pb-2 pt-2">
           <div>
+            {/* Rows grow instead of truncating: the OS release ("Windows 11
+                Pro 24H2 (26100.2314) · x64") does not fit 400px in mono, and a
+                version report must be readable on screen, not only in the
+                copied text. */}
             {rows.map((row, index) => (
               <div
                 key={row.label}
                 className={
                   index === 0
-                    ? "flex h-8 items-center gap-4"
-                    : "flex h-8 items-center gap-4 border-t border-border/50"
+                    ? "flex min-h-8 items-center gap-4 py-1"
+                    : "flex min-h-8 items-center gap-4 border-t border-border/50 py-1"
                 }
               >
-                <span className="w-24 flex-none text-[11px] text-muted-foreground">
+                <span className="w-20 flex-none text-[11px] text-muted-foreground">
                   {row.label}
                 </span>
-                <span className="min-w-0 truncate font-mono text-xs tabular-nums">
+                <span className="min-w-0 break-words font-mono text-xs leading-snug tabular-nums">
                   {row.value}
                 </span>
               </div>
             ))}
-            <div className="flex h-8 items-center gap-4 border-t border-border/50">
-              <span className="w-24 flex-none text-[11px] text-muted-foreground">
+            <div className="flex min-h-8 items-center gap-4 border-t border-border/50 py-1">
+              <span className="w-20 flex-none text-[11px] text-muted-foreground">
                 {t.aboutRepository}
               </span>
               <button
                 type="button"
                 onClick={() => void openUrl(REPO_URL).catch(() => {})}
-                className="min-w-0 truncate font-mono text-xs text-primary hover:underline"
+                className="min-w-0 break-words text-left font-mono text-xs text-primary hover:underline"
               >
                 {REPO_LABEL}
               </button>
@@ -168,7 +194,8 @@ export function AboutDialog({ isOpen, onClose }: AboutDialogProps) {
             <span className="font-mono text-[11px] text-muted-foreground">
               © {new Date().getFullYear()} tansen
             </span>
-            {/* One-line build stamp for issue reports: version, Tauri, OS. */}
+            {/* Build facts for issue reports: one per line, so pasting is
+                readable instead of one long "·"-joined string. */}
             <button
               type="button"
               onClick={handleCopy}

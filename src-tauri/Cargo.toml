@@ -69,6 +69,12 @@ futures-util = "0.3"
 minisign-verify = "0.2"
 semver = "1"
 
+# Windows registry read for the About dialog's OS row (design 084 colophon).
+# Already in Cargo.lock via tauri's Windows deps (winreg 0.56), so promoting it
+# to a direct dependency adds no new crate to the build.
+[target.'cfg(windows)'.dependencies]
+winreg = "0.56"
+
 # Test-only: generate minimal xlsx fixtures on the fly. Same
 # version already in Cargo.lock via tauri; Stored entries need no extra
 # features, so this adds no new crate to the build.

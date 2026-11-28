@@ -29,22 +29,33 @@ describe("AboutDialog copy version info", () => {
       tauriVersion: "2.9.0",
       platform: "windows",
       arch: "x86_64",
+      osVersion: "Windows 11 Pro 24H2 (26100.2314)",
+      webviewVersion: "131.0.2903.86",
     });
     writeText.mockClear();
     Object.assign(navigator, { clipboard: { writeText } });
   });
 
-  it("copies one issue-ready line with version, Tauri and OS", async () => {
+  it("shows the WebView and OS rows and copies one fact per line", async () => {
     renderDialog();
 
     // The action waits for the build facts before it can say anything useful.
     await waitFor(() => expect(screen.getByText("0.8.4")).toBeTruthy());
+    expect(screen.getByText("WebView2 131.0.2903.86")).toBeTruthy();
+    expect(
+      screen.getByText("Windows 11 Pro 24H2 (26100.2314) · x64"),
+    ).toBeTruthy();
 
     fireEvent.click(screen.getByLabelText(t.aboutCopyInfo));
 
     await waitFor(() =>
       expect(writeText).toHaveBeenCalledWith(
-        "easy-csv 0.8.4 · Tauri 2.9.0 · Windows · x64",
+        [
+          "easy-csv 0.8.4",
+          "Tauri 2.9.0",
+          "WebView2 131.0.2903.86",
+          "Windows 11 Pro 24H2 (26100.2314) · x64",
+        ].join("\n"),
       ),
     );
     expect(screen.getByText(t.aboutCopied)).toBeTruthy();

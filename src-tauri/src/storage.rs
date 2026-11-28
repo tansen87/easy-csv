@@ -339,8 +339,8 @@ pub async fn toggle_devtools(window: tauri::Window) -> Result<(), String> {
   Ok(())
 }
 
-/// Build metadata for the About dialog. Values come from the binary itself, so
-/// they stay correct offline and in dev builds.
+/// Build metadata for the About dialog. Values come from the binary (and the
+/// host) itself, so they stay correct offline and in dev builds.
 #[derive(serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AppInfo {
@@ -348,6 +348,10 @@ pub struct AppInfo {
   tauri_version: String,
   platform: String,
   arch: String,
+  /// Human-readable OS release, e.g. "Windows 11 Pro 24H2 (26100.2314)".
+  os_version: String,
+  /// WebView2 / WebKit version reported by the webview runtime.
+  webview_version: String,
 }
 
 #[tauri::command]
@@ -357,7 +361,78 @@ pub fn get_app_info() -> AppInfo {
     tauri_version: tauri::VERSION.to_string(),
     platform: std::env::consts::OS.to_string(),
     arch: std::env::consts::ARCH.to_string(),
+    os_version: os_version(),
+    webview_version: tauri::webview_version().unwrap_or_default(),
   }
+}
+
+/// OS release name for the About dialog, e.g. "Windows 11 Pro 24H2 (26100.2314)",
+/// "macOS 15.2", "Ubuntu 24.04.1 LTS". Falls back to the platform constant so
+/// the row is never blank (a stripped container may have no os-release file).
+fn os_version() -> String {
+  platform_os_version().unwrap_or_else(|| std::env::consts::OS.to_string())
+}
+
+#[cfg(windows)]
+fn platform_os_version() -> Option<String> {
+  use winreg::RegKey;
+  use winreg::enums::HKEY_LOCAL_MACHINE;
+
+  let key = RegKey::predef(HKEY_LOCAL_MACHINE)
+    .open_subkey(r"SOFTWARE\Microsoft\Windows NT\CurrentVersion")
+    .ok()?;
+  let mut product: String = key.get_value("ProductName").ok()?;
+  let display_version: String = key.get_value("DisplayVersion").unwrap_or_default();
+  let build: String = key.get_value("CurrentBuild").unwrap_or_default();
+  let revision: u32 = key.get_value("UBR").unwrap_or(0);
+
+  // Windows 11 still reports "Windows 10 …" as ProductName; the build number
+  // is what the OS actually is.
+  let is_windows_11 = build
+    .parse::<u32>()
+    .map(|value| value >= 22000)
+    .unwrap_or(false);
+  if is_windows_11 && product.starts_with("Windows 10") {
+    product = product.replacen("Windows 10", "Windows 11", 1);
+  }
+
+  if !display_version.is_empty() {
+    product.push(' ');
+    product.push_str(&display_version);
+  }
+  let build_label = if revision > 0 {
+    format!("{build}.{revision}")
+  } else {
+    build
+  };
+  if !build_label.is_empty() {
+    product.push_str(&format!(" ({build_label})"));
+  }
+  Some(product)
+}
+
+#[cfg(target_os = "macos")]
+fn platform_os_version() -> Option<String> {
+  let output = std::process::Command::new("sw_vers")
+    .arg("-productVersion")
+    .output()
+    .ok()?;
+  let version = String::from_utf8_lossy(&output.stdout).trim().to_string();
+  (!version.is_empty()).then(|| format!("macOS {version}"))
+}
+
+#[cfg(all(unix, not(target_os = "macos")))]
+fn platform_os_version() -> Option<String> {
+  let text = std::fs::read_to_string("/etc/os-release").ok()?;
+  text.lines()
+    .find_map(|line| line.strip_prefix("PRETTY_NAME="))
+    .map(|value| value.trim().trim_matches('"').to_string())
+    .filter(|value| !value.is_empty())
+}
+
+#[cfg(not(any(windows, unix)))]
+fn platform_os_version() -> Option<String> {
+  None
 }
 
 // Execution history

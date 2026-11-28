@@ -49,7 +49,8 @@ export interface Translations {
   reportIssue: string;
   about: string;
   aboutVersion: string;
-  aboutDistribution: string;
+  aboutSystem: string;
+  aboutWebView: string;
   aboutLicense: string;
   aboutRepository: string;
   aboutCopyInfo: string;
