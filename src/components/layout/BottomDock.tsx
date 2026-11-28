@@ -5,7 +5,7 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { Check, ChevronDown, Maximize2, Minimize2, X } from "lucide-react";
+import { Maximize2, Minimize2, X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/i18n";
@@ -208,12 +208,35 @@ export function BottomDock({
       )}
 
       <div className="flex h-8 flex-none items-center gap-2 border-b border-border-soft px-2">
-        <DockTabSwitcher
-          tabs={tabs}
-          active={active}
-          onSelect={onTabChange}
-          label={label}
-        />
+        <div
+          role="tablist"
+          {...(label ? { "aria-label": label } : {})}
+          className="flex shrink-0 items-center gap-0.5"
+        >
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              role="tab"
+              aria-selected={active === tab.id}
+              data-dock-tab={tab.id}
+              onClick={() => onTabChange(tab.id)}
+              className={cn(
+                "flex h-[24px] items-center gap-1.5 rounded-[5px] px-2 text-[11.5px] transition-colors",
+                active === tab.id
+                  ? "bg-muted font-medium text-foreground"
+                  : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+              )}
+            >
+              {tab.label}
+              {tab.count !== undefined && (
+                <span className="font-mono text-[9.5px] tabular-nums text-muted-foreground">
+                  {tab.count}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
 
         <span className="h-3 w-px shrink-0 bg-border-soft" aria-hidden="true" />
 
@@ -269,169 +292,6 @@ export function BottomDock({
           {active !== "logs" && panel}
         </div>
       </DockHeaderSlotContext.Provider>
-    </div>
-  );
-}
-
-/**
- * The dock's panel switcher (design 084 second pass): a select, not a row of
- * tabs. The header also has to hold the active panel's own tools (step chain
- * or log filters), and results multiply per branch — one control that names the
- * current panel keeps that room and answers "which page am I on" at a glance.
- *
- * Follows the select-only combobox pattern: the button carries `aria-expanded`
- * and `aria-activedescendant`, the list is a `listbox` of `option`s. The list
- * opens downward inside the dock (the drawer clips at the window edge), capped
- * in height so ten result branches cannot run off the dock.
- */
-function DockTabSwitcher({
-  tabs,
-  active,
-  onSelect,
-  label,
-}: {
-  tabs: BottomDockTabItem[];
-  active: BottomDockTab;
-  onSelect: (tab: BottomDockTab) => void;
-  label?: string;
-}) {
-  const [open, setOpen] = useState(false);
-  const [cursor, setCursor] = useState(0);
-  const rootRef = useRef<HTMLDivElement>(null);
-  const buttonRef = useRef<HTMLButtonElement>(null);
-  const currentIndex = Math.max(
-    0,
-    tabs.findIndex((tab) => tab.id === active),
-  );
-  const current = tabs[currentIndex] ?? tabs[0];
-
-  useEffect(() => {
-    if (!open) return;
-    setCursor(currentIndex);
-    const onDown = (event: MouseEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
-  }, [open, currentIndex]);
-
-  const choose = (id: BottomDockTab) => {
-    onSelect(id);
-    setOpen(false);
-    buttonRef.current?.focus();
-  };
-
-  const handleKeyDown = (event: React.KeyboardEvent) => {
-    if (!open) {
-      if (
-        event.key === "ArrowDown" ||
-        event.key === "ArrowUp" ||
-        event.key === "Enter" ||
-        event.key === " "
-      ) {
-        event.preventDefault();
-        setOpen(true);
-      }
-      return;
-    }
-    switch (event.key) {
-      case "ArrowDown":
-        event.preventDefault();
-        setCursor((index) => (index + 1) % tabs.length);
-        break;
-      case "ArrowUp":
-        event.preventDefault();
-        setCursor((index) => (index - 1 + tabs.length) % tabs.length);
-        break;
-      case "Home":
-        event.preventDefault();
-        setCursor(0);
-        break;
-      case "End":
-        event.preventDefault();
-        setCursor(tabs.length - 1);
-        break;
-      case "Enter":
-      case " ":
-        event.preventDefault();
-        if (tabs[cursor]) choose(tabs[cursor].id);
-        break;
-      case "Escape":
-        event.preventDefault();
-        setOpen(false);
-        buttonRef.current?.focus();
-        break;
-      case "Tab":
-        setOpen(false);
-        break;
-    }
-  };
-
-  return (
-    <div className="relative shrink-0" ref={rootRef} onKeyDown={handleKeyDown}>
-      <button
-        ref={buttonRef}
-        type="button"
-        role="combobox"
-        aria-haspopup="listbox"
-        aria-expanded={open}
-        aria-controls="dock-panel-list"
-        aria-activedescendant={
-          open && tabs[cursor] ? `dock-panel-${tabs[cursor].id}` : undefined
-        }
-        aria-label={label}
-        data-dock-switcher
-        onClick={() => setOpen((value) => !value)}
-        className={cn(
-          "flex h-[24px] items-center gap-1.5 rounded-[5px] border pl-2 pr-1 text-[11.5px] transition-colors",
-          open
-            ? "border-border bg-muted text-foreground"
-            : "border-border bg-background text-foreground hover:bg-muted/60",
-        )}
-      >
-        <span className="max-w-[132px] truncate">{current?.label}</span>
-        {current?.count !== undefined && (
-          <span className="font-mono text-[9.5px] tabular-nums text-muted-foreground">
-            {current.count}
-          </span>
-        )}
-        <ChevronDown className="h-3 w-3 shrink-0 text-muted-foreground" />
-      </button>
-
-      {open && (
-        <div
-          id="dock-panel-list"
-          role="listbox"
-          className="absolute left-0 top-full z-30 mt-1 max-h-[220px] w-[184px] overflow-y-auto rounded-md border border-border bg-popover p-1 shadow-md"
-        >
-          {tabs.map((tab, index) => (
-            <button
-              key={tab.id}
-              id={`dock-panel-${tab.id}`}
-              type="button"
-              role="option"
-              aria-selected={tab.id === active}
-              data-dock-tab={tab.id}
-              onMouseEnter={() => setCursor(index)}
-              onClick={() => choose(tab.id)}
-              className={cn(
-                "flex h-7 w-full items-center gap-2 rounded px-2 text-left text-[11.5px]",
-                index === cursor
-                  ? "bg-muted text-foreground"
-                  : "text-muted-foreground",
-              )}
-            >
-              <span className="min-w-0 flex-1 truncate">{tab.label}</span>
-              {tab.count !== undefined && (
-                <span className="font-mono text-[9.5px] tabular-nums text-muted-foreground">
-                  {tab.count}
-                </span>
-              )}
-              {tab.id === active && <Check className="h-3 w-3 text-primary" />}
-            </button>
-          ))}
-        </div>
-      )}
     </div>
   );
 }

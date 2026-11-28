@@ -185,7 +185,7 @@ describe("bottom dock (design 084)", () => {
     { id: "result:0" as const, label: t.results, count: 3 },
   ];
 
-  it("names the active panel in the switcher and lists 日志 first", () => {
+  it("always puts 日志 first and keeps the log body mounted", () => {
     const { container, getByText } = render(
       <LanguageProvider>
         <BottomDock
@@ -201,15 +201,9 @@ describe("bottom dock (design 084)", () => {
       </LanguageProvider>,
     );
 
-    // Closed switcher shows the current panel, not every panel.
-    const trigger = container.querySelector("[data-dock-switcher]")!;
-    expect(trigger.textContent).toContain(t.results);
-    expect(container.querySelectorAll("[data-dock-tab]")).toHaveLength(0);
-
-    fireEvent.click(trigger);
-    const options = container.querySelectorAll("[data-dock-tab]");
-    expect(options[0].getAttribute("data-dock-tab")).toBe("logs");
-    expect(options[1].getAttribute("data-dock-tab")).toBe("result:0");
+    const buttons = container.querySelectorAll("[data-dock-tab]");
+    expect(buttons[0].getAttribute("data-dock-tab")).toBe("logs");
+    expect(buttons[1].getAttribute("data-dock-tab")).toBe("result:0");
 
     // Hidden, not unmounted: filters and scroll survive a panel switch.
     expect(getByText("logs")).toBeTruthy();
@@ -234,8 +228,8 @@ describe("bottom dock (design 084)", () => {
 
     const meta = container.querySelector('[data-testid="dock-meta"]')!;
     const row = meta.parentElement!.parentElement!;
-    // One head row only: the meta sits beside the switcher, not under it.
-    expect(row.querySelector("[data-dock-switcher]")).toBeTruthy();
+    // One head row only: the meta sits beside the tabs, not under them.
+    expect(row.querySelector('[role="tablist"]')).toBeTruthy();
     expect(row.className).toContain("h-8");
   });
 
@@ -257,7 +251,6 @@ describe("bottom dock (design 084)", () => {
       </LanguageProvider>,
     );
 
-    fireEvent.click(container.querySelector("[data-dock-switcher]")!);
     fireEvent.click(container.querySelector('[data-dock-tab="result:0"]')!);
     expect(onTabChange).toHaveBeenCalledWith("result:0");
 

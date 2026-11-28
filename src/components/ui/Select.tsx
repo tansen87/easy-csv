@@ -45,6 +45,12 @@ interface SelectProps {
    */
   flip?: boolean;
   /**
+   * Extra classes for the open list. `portal` mode needs this when the host
+   * surface stacks higher than the list's default `z-[60]` - inside the
+   * settings dialog (`z-100`) the list would otherwise render behind it.
+   */
+  listClassName?: string;
+  /**
    * Render the open list in a body portal with fixed positioning. Needed
    * inside the right-click quick panels: their scroll body clips an in-flow
    * dropdown, so a list near the bottom would cut off and scroll the body
@@ -62,6 +68,7 @@ export function Select({
   width,
   height,
   listMaxHeight = "max-h-40",
+  listClassName,
   ariaLabel,
   flip = false,
   portal = false,
@@ -270,6 +277,7 @@ export function Select({
         "border rounded-md bg-background shadow-lg",
         portal ? "z-[60]" : "absolute z-50 w-full",
         !portal && (openUp ? "bottom-full mb-0.5" : "mt-0.5"),
+        listClassName,
       )}
     >
       <ScrollAreaPrimitive.Root className="relative overflow-hidden">

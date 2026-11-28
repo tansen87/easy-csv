@@ -223,6 +223,12 @@ function AccentChips({
   );
 }
 
+/**
+ * The settings dialog stacks at `z-100` (see `SettingsDialog`), so a portaled
+ * dropdown list — default `z-[60]` - has to be lifted above it.
+ */
+const DIALOG_LIST_CLASS = "z-[110]";
+
 export function SettingsTabContent({
   groups,
   query,
@@ -353,6 +359,11 @@ export function SettingsTabContent({
               size="sm"
               width={160}
               listMaxHeight="max-h-36"
+              // The group card clips its rows to the rounded corners
+              // (`overflow-hidden`), so an in-flow list would be cut at the
+              // card edge — float it, and lift it above the dialog (`z-100`).
+              portal
+              listClassName={DIALOG_LIST_CLASS}
             />
           </div>
         );
@@ -557,6 +568,8 @@ export function SettingsTabContent({
               placeholder={t.aiSelectProvider}
               size="sm"
               width={160}
+              portal
+              listClassName={DIALOG_LIST_CLASS}
             />
           </div>
         );
@@ -576,6 +589,8 @@ export function SettingsTabContent({
               placeholder={t.aiSelectModel}
               size="sm"
               width={160}
+              portal
+              listClassName={DIALOG_LIST_CLASS}
             />
           </div>
         );

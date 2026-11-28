@@ -137,15 +137,7 @@
         box-shadow:var(--shadow-up)}
   .dock-head{flex:none;display:flex;align-items:center;gap:8px;height:32px;padding:0 8px;
              border-bottom:1px solid var(--border-soft)}
-  .dselect{display:flex;flex:none;align-items:center;gap:6px;height:24px;padding:0 5px 0 8px;
-           border:1px solid var(--border);border-radius:5px;background:#fff;font-size:11.5px;color:var(--fg)}
-  .dselect .cnt{font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-2);font-variant-numeric:tabular-nums}
-  .dselect .chev{width:12px;height:12px;color:var(--muted-fg-2)}
-  .dock-list{width:184px;padding:4px;border:1px solid var(--border);border-radius:8px;background:#fff;box-shadow:var(--shadow-fly)}
-  .dock-list .it{display:flex;align-items:center;gap:8px;height:28px;padding:0 8px;border-radius:5px;
-                 font-size:11.5px;color:var(--muted-fg)}
-  .dock-list .it.on{background:var(--muted);color:var(--fg)}
-  .dock-list .it .n{margin-left:auto;font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-2);font-variant-numeric:tabular-nums}
+  .dock-tabs{display:flex;flex:none;align-items:center;gap:2px}
   .vrule{flex:none;width:1px;height:12px;background:var(--border-soft)}
   .dtab{display:flex;align-items:center;gap:7px;height:26px;padding:0 9px;border-radius:6px;font-size:11.5px;color:var(--muted-fg)}
   .dtab.on{background:var(--muted);color:var(--fg);font-weight:500}
@@ -301,7 +293,10 @@
 
         <div class="dock" style="height:246px">
           <div class="dock-head">
-            <span class="dselect">结果<span class="cnt">6 行</span><svg class="i i12 chev"><use href="#i-chev"/></svg></span>
+            <div class="dock-tabs">
+              <div class="dtab">日志<span class="cnt">24</span></div>
+              <div class="dtab on">结果<span class="cnt">6 行</span><span class="x">×</span></div>
+            </div>
             <span class="vrule"></span>
             <div class="chain">
               <span class="step"><i class="no">01</i><span class="nm">去掉空金额</span></span>
@@ -335,13 +330,7 @@
       </div>
       <p class="cap"><b>表格 1240 宽 / 卡片 560 宽。</b>（实现说明：画布上的折角未做——结果产出时直接打开结果页签，等价于旧版“结果自己冒出来”。）同一份 6 行两列数据，抽屉里 地区 列有 890px 可用，金额贴住右缘，中间全是同一条行线的留白——读起来是“项目 … 金额”，像一张对账单。画布只剩折角，管道仍占满视野。</p>
 
-    <div class="figure" style="margin-top:20px">
-      <div class="dock-list">
-        <div class="it">日志<span class="n">24</span></div>
-        <div class="it on">结果<span class="n">6 行</span><svg class="i i12 chev" style="color:var(--brand-ink)"><use href="#i-check"/></svg></div>
-      </div>
-      <p class="cap" style="max-width:460px">展开态：日志永远第一行，结果按分支排在后面，右侧写行数；当前项带底色与勾。头行左边只占一个 24px 的字段宽，页签原本要 140，结果再多也不会把这一行挤满。</p>
-    </div>
+
     </div>
   </section>
 
@@ -352,7 +341,10 @@
     <div class="figure">
       <div class="slab">
         <div class="dock-head">
-          <span class="dselect">结果<span class="cnt">6 行</span><svg class="i i12 chev"><use href="#i-chev"/></svg></span>
+          <div class="dock-tabs">
+            <div class="dtab">日志<span class="cnt">24</span></div>
+            <div class="dtab on">结果<span class="cnt">6 行</span><span class="x">×</span></div>
+          </div>
           <span class="vrule"></span>
           <div class="chain">
             <span class="step"><i class="no">01</i><span class="nm">连接订单明细</span></span>
@@ -398,7 +390,11 @@
     <div class="figure">
       <div class="slab">
         <div class="dock-head">
-          <span class="dselect">结果<span class="cnt">前 500 行</span><svg class="i i12 chev"><use href="#i-chev"/></svg></span>
+          <div class="dock-tabs">
+            <div class="dtab">日志<span class="cnt">24</span></div>
+            <div class="dtab">结果 1<span class="cnt">6 行</span></div>
+            <div class="dtab on">结果 2<span class="cnt">前 500 行</span><span class="x">×</span></div>
+          </div>
           <span class="vrule"></span>
           <div class="chain">
             <span class="step"><i class="no">01</i><span class="nm">去掉空金额</span></span>

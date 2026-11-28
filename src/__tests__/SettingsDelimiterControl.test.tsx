@@ -107,10 +107,12 @@ describe("settings page delimiter control (design 018 §3.9)", () => {
   });
 
   it("offers the five delimiters next to auto-detection", () => {
-    const { container } = renderSettings("auto");
+    renderSettings("auto");
     fireEvent.focus(delimiterCombo());
+    // The list is portaled to `document.body` (the group card clips its rows,
+    // design 084 feedback), so it is not under the render container.
     const labels = Array.from(
-      container.querySelectorAll("[role='option']"),
+      document.querySelectorAll("[role='option']"),
     ).map((o) => o.textContent);
     expect(labels).toEqual([
       "Auto-detect",

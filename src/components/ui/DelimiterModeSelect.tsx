@@ -13,6 +13,10 @@ export interface DelimiterModeSelectProps {
   /** The open dropdown's max height, as a class (default `max-h-40`). */
   listMaxHeight?: string;
   placeholder?: string;
+  /** Float the list in a body portal (see `Select`). */
+  portal?: boolean;
+  /** Extra classes for the open list (portal z-index overrides). */
+  listClassName?: string;
 }
 
 /**
@@ -31,6 +35,8 @@ export function DelimiterModeSelect({
   height,
   listMaxHeight,
   placeholder,
+  portal,
+  listClassName,
 }: DelimiterModeSelectProps) {
   const { t } = useLanguage();
 
@@ -51,6 +57,8 @@ export function DelimiterModeSelect({
       width={width}
       height={height}
       listMaxHeight={listMaxHeight}
+      portal={portal}
+      listClassName={listClassName}
     />
   );
 }

@@ -257,8 +257,10 @@ describe("settings dialog — whole-row activation (design 030 §4.2)", () => {
     fireEvent.click(row);
 
     expect(document.activeElement).toBe(combo);
-    // `Select` opens on focus.
-    expect(row.querySelector('[role="listbox"]')).toBeTruthy();
+    // `Select` opens on focus. The list is portaled to `document.body` (the
+    // group card clips its rows, design 084 feedback), so it is not a child of
+    // the row anymore.
+    expect(document.querySelector('[role="listbox"]')).toBeTruthy();
     expect(row.className).toContain("cursor-pointer");
   });
 

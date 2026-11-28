@@ -260,8 +260,8 @@ export const zhPipeline = {
 
   // Results dock (design 084)
   results: "结果",
-  resultRowsCols: "{rows} 行 x {cols} 列",
-  resultRowsColsTruncated: "前 {rows} 行 x {cols} 列",
+  resultRowsCols: "{rows} 行 × {cols} 列",
+  resultRowsColsTruncated: "前 {rows} 行 × {cols} 列",
   resultTruncatedRows: "前 {n} 行",
   resultEmpty: "运行管道后，结果会出现在这里",
   paste: "粘贴",
