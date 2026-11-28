@@ -35,7 +35,7 @@ export async function runPipeline(
 ): Promise<void> {
   const { currentPipeline, currentTab, edges, outputPath, executableSteps } =
     pending;
-  const { showToast, labels, setShowLogPanel } = deps;
+  const { showToast, labels, openLogs } = deps;
 
   // Resolve `{{var}}` placeholders on a deep clone; stored placeholders and
   // the tab pipeline stay untouched.
@@ -90,11 +90,12 @@ export async function runPipeline(
     showProgress: true,
     executingStartedAt: runStartedAt,
   });
-  // 071 feedback: the log drawer no longer opens by itself — the completion
-  // toast's 「查看日志」 action owns that now. The 「自动弹出日志」 setting
-  // (default off) restores the eager open for users who want it.
+  // 071 feedback: the dock no longer opens by itself — the completion toast's
+  // 「查看日志」 action owns that now. The 「打开日志面板」 setting
+  // (default off) restores the eager open for users who want it — always on the
+  // **log** tab, since the setting is named for logs (design 084).
   if (deps.autoShowLogPanel) {
-    setShowLogPanel(true);
+    openLogs();
   }
 
   // Hoisted so the finally block can determine the final status.
@@ -251,7 +252,7 @@ export async function runPipeline(
       const duration = `${(durationMs / 1000).toFixed(1)} s`;
       const viewLogs = {
         label: labels.viewLogs,
-        onClick: () => setShowLogPanel(true),
+        onClick: openLogs,
       };
       if (status === "success") {
         const completedAt = new Date().toTimeString().slice(0, 8);

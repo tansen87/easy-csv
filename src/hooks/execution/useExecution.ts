@@ -64,6 +64,11 @@ interface UseExecutionProps {
   ) => void;
   setTabs: Dispatch<SetStateAction<PipelineTab[]>>;
   setShowLogPanel: (value: boolean) => void;
+  /**
+   * Open the bottom dock on the **log** tab. Falls back to a bare open when the
+   * host does not wire it (tests), which is the pre-084 behaviour.
+   */
+  openLogs?: () => void;
   /** Open the bottom dock on the results tab for a tab that just produced some. */
   openResults?: (tabId: string) => void;
   setShowChartPanel: (value: boolean) => void;
@@ -107,6 +112,7 @@ export function useExecution({
   addLog,
   setTabs,
   setShowLogPanel,
+  openLogs,
   openResults,
   setShowChartPanel,
   setTabChart,
@@ -289,7 +295,7 @@ export function useExecution({
         viewLogs: t.toastViewLogs,
         openLogsDir: t.logOpenDir,
       },
-      setShowLogPanel,
+      openLogs: openLogs ?? (() => setShowLogPanel(true)),
       openResults,
       autoShowLogPanel,
       requestOverwritePrompt: (runId, data) =>
@@ -320,6 +326,7 @@ export function useExecution({
       saveVersion,
       setShowChartPanel,
       setShowLogPanel,
+      openLogs,
       openResults,
       setTabChart,
       setTabResultPreview,

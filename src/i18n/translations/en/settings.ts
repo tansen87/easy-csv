@@ -50,9 +50,8 @@ export const enSettings = {
   logOpenDirAction: "Open log folder",
   logOpenDirDesc:
     "Logs live under data/logs, one easy-csv-YYYY-MM-DD.log file per day",
-  autoShowLogPanel: "Auto-open logs",
-  autoShowLogPanelDesc:
-    "When enabled, open the log drawer automatically when a run starts",
+  autoShowLogPanel: "Open the log panel",
+  autoShowLogPanelDesc: "When enabled, open the panel log tab during runtime",
   settingsClear: "Clear",
   settingsExpand: "Expand",
   settingsCollapse: "Collapse",

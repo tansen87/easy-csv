@@ -140,7 +140,8 @@
   .dock-tabs{display:flex;flex:none;align-items:center;gap:2px}
   .vrule{flex:none;width:1px;height:12px;background:var(--border-soft)}
   .dtab{display:flex;align-items:center;gap:7px;height:26px;padding:0 9px;border-radius:6px;font-size:11.5px;color:var(--muted-fg)}
-  .dtab.on{background:var(--muted);color:var(--fg);font-weight:500}
+  /* Same recipe as the app's `.tab-selected`: brand 12% over the card. */
+  .dtab.on{background:color-mix(in oklab, var(--brand) 12%, #fff);color:var(--fg);font-weight:500}
   .dtab .no{font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-3);font-variant-numeric:tabular-nums}
   .dtab.on .no{color:var(--muted-fg-2)}
   .dtab .cnt{font-family:var(--mono);font-size:10px;color:var(--muted-fg-2);font-variant-numeric:tabular-nums}

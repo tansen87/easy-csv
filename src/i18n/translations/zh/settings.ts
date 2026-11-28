@@ -46,8 +46,8 @@ export const zhSettings = {
   logOpenDirAction: "打开日志目录",
   logOpenDirDesc:
     "日志保存在 data/logs 下, 每天一个 easy-csv-YYYY-MM-DD.log 文件",
-  autoShowLogPanel: "自动弹出日志",
-  autoShowLogPanelDesc: "启用后, 运行开始时自动打开日志抽屉",
+  autoShowLogPanel: "打开日志面板",
+  autoShowLogPanelDesc: "启用时, 运行时打开面板日志页签",
   settingsClear: "清除",
   settingsExpand: "展开",
   settingsCollapse: "收起",

@@ -414,6 +414,7 @@ export interface Translations {
 
   // Results dock (design 084)
   results: string;
+  dockNewResults: string;
   /** `{rows}` / `{cols}` placeholders. */
   resultRowsCols: string;
   resultRowsColsTruncated: string;

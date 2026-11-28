@@ -54,6 +54,11 @@ export interface BottomDockTabItem {
   label: string;
   /** Right-hand figure: line count, row count, "前 500 行". */
   count?: React.ReactNode;
+  /**
+   * Content arrived while another panel was being read. A dot, not a jump:
+   * a finished run must not pull the user away from the logs they opened.
+   */
+  unseen?: boolean;
 }
 
 const DEFAULT_HEIGHT = 260;
@@ -223,8 +228,11 @@ export function BottomDock({
               onClick={() => onTabChange(tab.id)}
               className={cn(
                 "flex h-[24px] items-center gap-1.5 rounded-[5px] px-2 text-[11.5px] transition-colors",
+                // Same recipe as the document tabs (`.tab-selected`): a 12%
+                // brand wash on the card surface, plus the inset ring in dark
+                // mode. "Selected" then means one thing across the app.
                 active === tab.id
-                  ? "bg-muted font-medium text-foreground"
+                  ? "tab-selected font-medium text-foreground"
                   : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
               )}
             >
@@ -233,6 +241,13 @@ export function BottomDock({
                 <span className="font-mono text-[9.5px] tabular-nums text-muted-foreground">
                   {tab.count}
                 </span>
+              )}
+              {tab.unseen && (
+                <span
+                  className="h-1 w-1 shrink-0 rounded-full bg-primary"
+                  title={t.dockNewResults}
+                  aria-hidden="true"
+                />
               )}
             </button>
           ))}

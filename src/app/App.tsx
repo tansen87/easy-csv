@@ -149,7 +149,7 @@ function AppContent() {
   const ui = useUIState();
   // Stable setters used by effects/callbacks declared before `ui` is fully
   // consumed (bottom dock tabs, design 084).
-  const { setShowLogPanel, setBottomDockTab } = ui;
+  const { setShowLogPanel, setBottomDockTab, setResultsUnseen } = ui;
 
   // App settings
   const settings = useAppSettings(showToastRef);
@@ -748,16 +748,58 @@ function AppContent() {
   });
 
   /**
-   * A run just produced results. Only the tab the user is looking at pulls the
-   * dock open — a background tab finishing must not steal the view.
+   * Open the dock on the log tab — the one entry point for "show me the logs".
+   * Named tabs matter now that the dock also holds results: a bare
+   * `setShowLogPanel(true)` would re-open whatever tab was last used.
    */
+  const openLogsDock = useCallback(() => {
+    setBottomDockTab("logs");
+    setShowLogPanel(true);
+  }, [setBottomDockTab, setShowLogPanel]);
+
+  /**
+   * A run produced results (design 084).
+   *
+   * Only the tab the user is looking at may pull the dock open, and a run must
+   * never yank the panel the user is reading: if the dock is already open on
+   * logs, the result tab just gets a dot instead of stealing the view.
+   */
+  /**
+   * The dock/selection as of the latest render. `runPipeline` captures the deps
+   * bag when a run **starts**, so anything reading live state when the run
+   * **finishes** has to come through a ref — otherwise opening the logs
+   * mid-run would be invisible to this check.
+   */
+  const liveViewRef = useRef({
+    selectedTabId: tabsHook.selectedTabId,
+    dockOpen: ui.showLogPanel,
+    dockTab: ui.bottomDockTab,
+  });
+  liveViewRef.current = {
+    selectedTabId: tabsHook.selectedTabId,
+    dockOpen: ui.showLogPanel,
+    dockTab: ui.bottomDockTab,
+  };
+
   const openResultsForTab = useCallback(
     (tabId: string) => {
-      if (tabId !== tabsHook.selectedTabId) return;
+      const view = liveViewRef.current;
+      if (tabId !== view.selectedTabId) return;
+      if (!view.dockOpen) {
+        setBottomDockTab("result:0");
+        setShowLogPanel(true);
+        setResultsUnseen(false);
+        return;
+      }
+      if (!view.dockTab.startsWith("result")) {
+        // Reading logs: leave the view alone, mark the result tab.
+        setResultsUnseen(true);
+        return;
+      }
       setBottomDockTab("result:0");
-      setShowLogPanel(true);
+      setResultsUnseen(false);
     },
-    [tabsHook.selectedTabId, setBottomDockTab, setShowLogPanel],
+    [setBottomDockTab, setShowLogPanel, setResultsUnseen],
   );
 
   const execution = useExecution({
@@ -772,6 +814,7 @@ function AppContent() {
     addLog,
     setTabs: tabsHook.setTabs,
     setShowLogPanel: ui.setShowLogPanel,
+    openLogs: openLogsDock,
     openResults: openResultsForTab,
     setShowChartPanel: ui.setShowChartPanel,
     setTabChart: ui.setTabChart,
@@ -794,10 +837,6 @@ function AppContent() {
   } = execution;
 
   // ── Bottom dock (design 084): 日志 first, then one tab per result branch ──
-  const openLogsDock = useCallback(() => {
-    setBottomDockTab("logs");
-    setShowLogPanel(true);
-  }, [setBottomDockTab, setShowLogPanel]);
   const onToggleLogPanel = useCallback(() => {
     if (ui.showLogPanel && ui.bottomDockTab === "logs") {
       setShowLogPanel(false);
@@ -813,12 +852,14 @@ function AppContent() {
     // No results yet: land on the log tab rather than a dead key.
     setBottomDockTab(resultPreview.length > 0 ? "result:0" : "logs");
     setShowLogPanel(true);
+    setResultsUnseen(false);
   }, [
     ui.showLogPanel,
     ui.bottomDockTab,
     resultPreview.length,
     setBottomDockTab,
     setShowLogPanel,
+    setResultsUnseen,
   ]);
 
   // The dock's tab row: 日志 is always first (design 084 feedback), results
@@ -842,9 +883,19 @@ function AppContent() {
         count: result.truncated
           ? t.resultTruncatedRows.replace("{n}", String(result.totalRows))
           : result.totalRows,
+        // A run finished while the logs were being read: dot the first result
+        // instead of switching the panel under the user's eyes.
+        unseen: index === 0 && ui.resultsUnseen,
       })),
     ],
-    [logs.length, resultPreview, t.logs, t.results, t.resultTruncatedRows],
+    [
+      logs.length,
+      resultPreview,
+      t.logs,
+      t.results,
+      t.resultTruncatedRows,
+      ui.resultsUnseen,
+    ],
   );
 
   // ── Per-tab execution state (design 028 §5) ───────────────────────────────
@@ -1948,7 +1999,10 @@ function AppContent() {
               activeTab={
                 dockResultIndex >= 0 ? `result:${dockResultIndex}` : "logs"
               }
-              onTabChange={(tab) => ui.setBottomDockTab(tab)}
+              onTabChange={(tab) => {
+              setBottomDockTab(tab);
+              if (tab.startsWith("result")) setResultsUnseen(false);
+            }}
               onClose={() => ui.setShowLogPanel(false)}
               tabs={dockTabs}
               preferredHeight={

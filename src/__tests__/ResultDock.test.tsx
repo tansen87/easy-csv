@@ -101,7 +101,7 @@ describe("result meta row (design 084)", () => {
     const { getByText } = renderMeta(makeResult());
     expect(getByText("去掉空金额")).toBeTruthy();
     expect(getByText("按地区汇总")).toBeTruthy();
-    expect(getByText("3 rows × 2 cols")).toBeTruthy();
+    expect(getByText("3 rows x 2 cols")).toBeTruthy();
   });
 
   it("says 前 N 行 when the preview is truncated", () => {
@@ -109,7 +109,7 @@ describe("result meta row (design 084)", () => {
       makeResult({ truncated: true, totalRows: 500 }),
       1,
     );
-    expect(getByText("first 500 rows × 2 cols")).toBeTruthy();
+    expect(getByText("first 500 rows x 2 cols")).toBeTruthy();
   });
 
   it("explains the copy button with the app tooltip, not a native title", () => {
@@ -231,6 +231,33 @@ describe("bottom dock (design 084)", () => {
     // One head row only: the meta sits beside the tabs, not under them.
     expect(row.querySelector('[role="tablist"]')).toBeTruthy();
     expect(row.className).toContain("h-8");
+  });
+
+  it("dots a result tab that arrived while another panel was read", () => {
+    const { container } = render(
+      <LanguageProvider>
+        <BottomDock
+          open
+          activeTab="logs"
+          onTabChange={vi.fn()}
+          onClose={vi.fn()}
+          tabs={[
+            { id: "logs", label: t.logs, count: 12 },
+            { id: "result:0", label: t.results, count: 3, unseen: true },
+          ]}
+        >
+          <div>logs</div>
+        </BottomDock>
+      </LanguageProvider>,
+    );
+
+    const dot = container.querySelector('[data-dock-tab="result:0"] .bg-primary');
+    expect(dot).toBeTruthy();
+    expect(dot?.getAttribute("title")).toBe(t.dockNewResults);
+    // The logs tab never carries the dot.
+    expect(
+      container.querySelector('[data-dock-tab="logs"] .bg-primary'),
+    ).toBeNull();
   });
 
   it("reports tab changes and closing", () => {

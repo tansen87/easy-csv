@@ -206,7 +206,13 @@ describe("VersionControlPanel composer", () => {
     await waitFor(() =>
       expect(props.onSaveVersion).toHaveBeenCalledWith(undefined, []),
     );
-    expect(container.textContent).not.toContain("保存当前管道为版本");
+    // `submitComposer` closes the composer **after** awaiting the save, so the
+    // call can land one microtask before the re-render. Wait for the UI to
+    // settle instead of asserting on the same tick (was order-flaky in the
+    // full suite).
+    await waitFor(() =>
+      expect(container.textContent).not.toContain("保存当前管道为版本"),
+    );
   });
 
   it("collects tags as chips before saving", async () => {

@@ -269,8 +269,9 @@ export const enPipeline = {
 
   // Results dock (design 084)
   results: "Results",
-  resultRowsCols: "{rows} rows × {cols} cols",
-  resultRowsColsTruncated: "first {rows} rows × {cols} cols",
+  dockNewResults: "New results",
+  resultRowsCols: "{rows} rows x {cols} cols",
+  resultRowsColsTruncated: "first {rows} rows x {cols} cols",
   resultTruncatedRows: "first {n}",
   resultEmpty: "Run the pipeline to see results here",
   paste: "Paste",

@@ -12,6 +12,11 @@ export function useUIState() {
    * from a previous run can fall back instead of rendering an empty body.
    */
   const [bottomDockTab, setBottomDockTab] = useState<string>("logs");
+  /**
+   * A run finished with results while the user was reading logs: mark the
+   * result tab instead of stealing the view (design 084).
+   */
+  const [resultsUnseen, setResultsUnseen] = useState(false);
   const [activeMenu, setActiveMenu] = useState<
     "file" | "edit" | "view" | "tools" | "help" | null
   >(null);
@@ -88,6 +93,8 @@ export function useUIState() {
     setShowLogPanel,
     bottomDockTab,
     setBottomDockTab,
+    resultsUnseen,
+    setResultsUnseen,
     activeMenu,
     setActiveMenu,
     isMenuActivated,
