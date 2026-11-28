@@ -19,6 +19,7 @@ export const zhDialog = {
   csvDiffNoResult: "选择两个 CSV 文件并点击开始对比",
   csvDiffEmptyTitle: "尚未对比",
   csvDiffEmptyBody: "按关键列匹配行, 逐行列出新增、删除与修改",
+  csvDiffEdit: "重设",
   csvDiffUnchanged: "未变",
   csvDiffLegendAdded: "仅在文件 B 中出现的行",
   csvDiffLegendRemoved: "仅在文件 A 中出现的行",

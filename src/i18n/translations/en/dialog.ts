@@ -20,6 +20,7 @@ export const enDialog = {
   csvDiffEmptyTitle: "Not compared yet",
   csvDiffEmptyBody:
     "Rows are matched on the key columns, then listed as added, removed or modified",
+  csvDiffEdit: "Edit",
   csvDiffUnchanged: "unchanged",
   csvDiffLegendAdded: "Rows that only exist in file B",
   csvDiffLegendRemoved: "Rows that only exist in file A",

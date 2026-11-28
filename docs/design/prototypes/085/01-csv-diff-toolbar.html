@@ -1,0 +1,710 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>原型 085-01 · 对比差异顶部工具栏</title>
+<style>
+  :root{
+    --font:"Inter","Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Consolas,monospace;
+
+    --bg:oklch(1 0 0);
+    --fg:oklch(0.145 0 0);
+    --card:oklch(1 0 0);
+    --muted:oklch(0.97 0 0);
+    --muted-fg:oklch(0.556 0 0);
+    --muted-fg-2:oklch(0.66 0 0);
+    --muted-fg-3:oklch(0.76 0 0);
+    --border:oklch(0.922 0 0);
+    --rule:oklch(0.2 0.01 80 / 7%);
+
+    --brand:oklch(0.42 0.055 250);
+    --brand-soft:color-mix(in oklab,var(--brand) 9%,transparent);
+    --brand-border:color-mix(in oklab,var(--brand) 40%,transparent);
+    --chrome:color-mix(in oklab,var(--brand) 12%,var(--bg));
+    --chrome-border:color-mix(in oklab,var(--brand) 30%,transparent);
+
+    --ok:oklch(0.52 0.09 150);
+    --warn:oklch(0.55 0.1 72);
+    --danger:oklch(0.577 0.245 27.325);
+
+    --stage:oklch(0.945 0.002 80);
+    --dot:oklch(0.2 0.01 80 / 8%);
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{font-family:var(--font);color:var(--fg);background-color:var(--stage);
+       background-image:radial-gradient(var(--dot) 1px,transparent 1px);background-size:16px 16px;
+       -webkit-font-smoothing:antialiased}
+  .mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+  #sheet{width:1200px;margin:0 auto;padding:28px 0 72px}
+  .eyebrow{font-family:var(--mono);font-size:10.5px;letter-spacing:.02em;color:var(--muted-fg);margin-bottom:7px}
+  .stage-bar{padding-bottom:22px}
+  .stage-bar h1{margin:0;font-size:17px;font-weight:500;letter-spacing:-.01em}
+  .stage-bar p{margin:8px 0 0;font-size:12px;color:var(--muted-fg);max-width:1010px;line-height:1.8}
+  .stage-bar p b{font-weight:500;color:var(--fg)}
+
+  .direction{display:grid;grid-template-columns:repeat(5,1fr);margin:0 0 38px;
+             border:1px solid var(--border);border-radius:10px;background:var(--card);overflow:hidden}
+  .direction div{padding:11px 14px;border-right:1px solid var(--rule)}
+  .direction div:last-child{border-right:0}
+  .direction dt{font-family:var(--mono);font-size:10px;color:var(--muted-fg-3);margin-bottom:4px}
+  .direction dd{margin:0;font-size:11.5px;line-height:1.6}
+
+  .frame + .frame{margin-top:48px}
+  .cap{display:flex;align-items:baseline;gap:10px;padding-bottom:10px;
+       border-bottom:1px solid var(--rule);margin-bottom:16px}
+  .cap b{font-size:11.5px;font-weight:500;color:var(--fg)}
+  .cap span{font-family:var(--mono);font-size:10px;color:var(--muted-fg-3)}
+  .cap .file{color:var(--muted-fg-3);margin-left:auto;font-family:var(--mono);font-size:10px}
+  .note{margin:14px 0 0;font-size:11.5px;line-height:1.8;color:var(--muted-fg);max-width:1010px}
+  .note b{font-weight:500;color:var(--fg)}
+
+  /* ── 应用外壳 ───────────────────────────── */
+  .app{width:1160px;max-width:100%;height:640px;border:1px solid var(--border);border-radius:12px;
+       overflow:hidden;display:flex;flex-direction:column;position:relative;background:var(--bg);
+       color:var(--fg);box-shadow:0 1px 2px oklch(0.2 0.02 80 / 5%)}
+  .topbar{height:36px;flex:none;display:flex;align-items:center;gap:2px;padding:0 12px;
+          border-bottom:1px solid var(--chrome-border);background:var(--chrome)}
+  .brand{display:flex;align-items:center;gap:8px;padding-right:12px;margin-right:4px;
+         border-right:1px solid var(--chrome-border)}
+  .brand .mark{width:14px;height:14px;border-radius:3px;background:var(--brand);opacity:.9}
+  .brand .nm{font-size:11.5px;font-weight:500;color:var(--fg)}
+  .m{font-size:11.5px;padding:4px 8px;border-radius:5px;color:oklch(0.3 0.01 250)}
+  .m.on{background:color-mix(in oklab,var(--brand) 12%,transparent)}
+  .spacer{flex:1}
+  .cmdfield{height:24px;width:260px;display:flex;align-items:center;gap:6px;
+            border:1px solid var(--border);border-radius:6px;padding:0 9px;
+            background:var(--bg);color:var(--muted-fg-3);font-size:11px}
+  .key{font-family:var(--mono);font-size:9.5px;border:1px solid var(--border);border-radius:4px;
+       padding:1px 4px;color:var(--muted-fg-2);background:var(--bg)}
+  .iconbtn{width:24px;height:24px;display:grid;place-items:center;border-radius:5px;color:var(--muted-fg)}
+  .iconbtn svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:1.5}
+
+  /* ── 对比视图 ───────────────────────────── */
+  .diff{flex:1;min-height:0;display:flex;flex-direction:column;background:var(--card);position:relative}
+
+  .viewbar{height:40px;flex:none;display:flex;align-items:center;padding:0 16px;
+           border-bottom:1px solid var(--border)}
+  .viewbar h3{margin:0;font-size:13px;font-weight:500}
+  .viewbar .close{margin-left:auto;width:28px;height:28px;display:grid;place-items:center;
+                  border-radius:6px;color:var(--muted-fg)}
+  .viewbar .close svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.6}
+
+  /* 现状：两行配置 */
+  .config{padding:12px 16px;border-bottom:1px solid var(--border)}
+  .files{display:flex;gap:10px}
+  .slot{flex:1;min-width:0;height:48px;display:flex;align-items:center;gap:10px;
+        border:1px solid var(--border);border-radius:10px;padding:0 10px;background:var(--bg)}
+  .side{width:18px;height:18px;flex:none;display:grid;place-items:center;
+        border:1px solid var(--border);border-radius:4px;font-family:var(--mono);
+        font-size:10px;line-height:1;color:var(--muted-fg)}
+  .slot .meta{flex:1;min-width:0}
+  .slot .name{font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .slot .path{font-family:var(--mono);font-size:10px;line-height:14px;color:var(--muted-fg);
+              white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .slot .open{font-size:11px;color:var(--muted-fg)}
+  .row2{display:flex;align-items:center;gap:10px;margin-top:10px;min-width:0}
+  .lbl{font-size:11px;color:var(--muted-fg);flex:none}
+  .select{height:32px;width:104px;flex:none;display:flex;align-items:center;justify-content:space-between;
+          border:1px solid var(--border);border-radius:8px;padding:0 8px 0 12px;
+          background:var(--bg);font-size:12px;color:var(--fg)}
+  .select svg{width:11px;height:11px;stroke:var(--muted-fg-2);fill:none;stroke-width:1.6}
+  .vrule{width:1px;height:18px;background:var(--border);flex:none;margin:0 2px}
+  .chips{display:flex;align-items:center;gap:6px;min-width:0;overflow:hidden}
+  .chip{height:24px;flex:none;display:inline-flex;align-items:center;gap:4px;
+        border:1px solid var(--border);border-radius:6px;padding:0 8px;
+        font-size:11px;color:var(--muted-fg);background:var(--bg)}
+  .chip.sel{border-color:var(--brand-border);background:var(--brand-soft);color:var(--brand)}
+  .chip .x{opacity:.7;font-size:10px}
+  .hint{font-size:11px;color:var(--muted-fg);min-width:0;overflow:hidden;text-overflow:ellipsis}
+  .btn{height:32px;display:inline-flex;align-items:center;gap:6px;border-radius:8px;
+       padding:0 12px;font-size:12px;border:1px solid transparent}
+  .btn-primary{background:var(--brand);color:oklch(0.985 0 0)}
+  .btn-primary svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:1.6}
+  .push{margin-left:auto}
+
+  /* 方案 A：单行工具条 */
+  .toolbar{height:44px;flex:none;display:flex;align-items:center;gap:10px;padding:0 16px;
+           border-bottom:1px solid var(--border)}
+  .fbtn{height:32px;flex:1;min-width:0;max-width:330px;display:flex;align-items:center;gap:8px;
+        border:1px solid var(--border);border-radius:8px;padding:0 10px;background:var(--bg)}
+  .fbtn .nm{font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .fbtn .nm.empty{font-weight:400;color:var(--muted-fg-3)}
+  .kbtn{height:28px;flex:none;display:inline-flex;align-items:center;gap:6px;
+        border:1px solid var(--border);border-radius:7px;padding:0 9px;
+        font-size:11px;color:var(--muted-fg);background:var(--bg)}
+  .kbtn .n{font-family:var(--mono);font-size:10px;color:var(--fg)}
+  .kbtn svg{width:11px;height:11px;stroke:var(--muted-fg-2);fill:none;stroke-width:1.6}
+  .xbtn{width:28px;height:28px;flex:none;display:grid;place-items:center;border-radius:6px;color:var(--muted-fg)}
+  .xbtn svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.6}
+
+  /* 统计行 */
+  .stats{height:40px;flex:none;display:flex;align-items:center;gap:16px;padding:0 16px;
+         border-bottom:1px solid var(--border)}
+  .stat{display:inline-flex;align-items:baseline;gap:6px;font-size:11px;color:var(--muted-fg)}
+  .stat .mk{font-family:var(--mono);font-size:12px;line-height:1}
+  .stat .v{font-family:var(--mono);font-size:11px;color:var(--fg)}
+  .stat .mk.ok{color:var(--ok)}
+  .stat .mk.bad{color:var(--danger)}
+  .stat .mk.warn{color:var(--warn)}
+  .stat .mk.eq{color:var(--muted-fg)}
+  .stats .right{margin-left:auto;display:flex;align-items:center;gap:6px;
+                font-family:var(--mono);font-size:10px;color:var(--muted-fg)}
+
+  /* 表格 */
+  .tbl{flex:1;min-height:0;overflow:hidden}
+  table.d{width:100%;border-collapse:collapse;table-layout:fixed}
+  table.d th{height:36px;padding:0 12px;text-align:left;font-size:11px;font-weight:500;
+             color:var(--muted-fg);background:var(--card);border-bottom:1px solid var(--border)}
+  table.d th.g{text-align:right;font-family:var(--mono);font-size:10px;font-weight:400;
+               background:var(--muted);border-right:1px solid var(--border);padding-right:8px}
+  table.d td{height:34px;padding:0 12px;font-size:12px;border-bottom:1px solid var(--rule);
+             vertical-align:middle;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  table.d td.g{padding:0 8px;background:color-mix(in oklab,var(--muted) 55%,var(--card));
+               border-right:1px solid var(--border)}
+  .gwrap{display:flex;align-items:center;justify-content:space-between;gap:6px}
+  .mk{font-family:var(--mono);font-size:11px;line-height:1;width:12px;text-align:center;flex:none}
+  .mk.ok{color:var(--ok)}
+  .mk.bad{color:var(--danger)}
+  .mk.warn{color:var(--warn)}
+  .mk.eq{color:var(--muted-fg)}
+  .lines{display:flex;flex-direction:column;gap:1px;font-family:var(--mono);font-size:10px;
+         line-height:12px;color:var(--muted-fg);text-align:right}
+  .muted{color:var(--muted-fg)}
+  .faint{color:var(--muted-fg-3)}
+  .cellmod{background:color-mix(in oklab,var(--warn) 5%,transparent);
+           box-shadow:inset 2px 0 0 0 var(--warn)}
+  .cellmod .old{font-family:var(--mono);font-size:11px;line-height:15px;color:var(--muted-fg)}
+  .cellmod .new{font-size:12px;font-weight:500;line-height:16px;color:var(--fg)}
+  .eqrow td{background:color-mix(in oklab,var(--muted) 70%,var(--card));height:32px}
+  .eqrow .eqtext{display:flex;align-items:baseline;gap:10px;font-size:11px;color:var(--muted-fg)}
+  .eqrow .range{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--muted-fg)}
+
+  /* 空状态 */
+  .empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}
+  .empty .lead{max-width:520px;text-align:center}
+  .empty .lead .t{font-size:13px;font-weight:500}
+  .empty .lead .b{margin-top:4px;font-size:12px;line-height:20px;color:var(--muted-fg)}
+  .legend{width:520px;max-width:calc(100% - 48px);border:1px solid var(--border);border-radius:10px;
+          background:var(--bg);padding:0 16px}
+  .legend .r{height:30px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--rule)}
+  .legend .r:last-child{border-bottom:0}
+  .legend .lb{width:32px;flex:none;font-size:11px;color:var(--fg)}
+  .legend .ds{font-size:11px;color:var(--muted-fg);min-width:0;overflow:hidden;text-overflow:ellipsis}
+
+  /* 测量线 */
+  .cut{position:absolute;left:0;right:0;border-top:1px dashed;pointer-events:none}
+  .cut .tag{position:absolute;right:8px;top:-9px;padding:1px 5px;border-radius:3px;
+            background:var(--card);font-family:var(--mono);font-size:9.5px;line-height:14px}
+  .cut.red{border-color:oklch(0.58 0.2 27 / 70%)}
+  .cut.red .tag{color:var(--danger);border:1px solid oklch(0.58 0.2 27 / 35%)}
+  .cut.good{border-color:oklch(0.5 0.12 150 / 65%)}
+  .cut.good .tag{color:var(--ok);border:1px solid oklch(0.5 0.12 150 / 35%)}
+
+  .ghost{outline:1px dashed oklch(0.58 0.2 27 / 45%);outline-offset:2px}
+
+  /* 对比表 */
+  table.cmp{width:100%;border-collapse:collapse;font-size:11.5px;background:var(--card);
+            border:1px solid var(--border);border-radius:10px;overflow:hidden}
+  table.cmp th,table.cmp td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--rule)}
+  table.cmp th{font-weight:500;font-size:11px;color:var(--muted-fg);background:var(--muted)}
+  table.cmp tr:last-child td{border-bottom:0}
+  table.cmp td.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+  table.cmp .pick{color:var(--brand)}
+</style>
+</head>
+<body>
+<div id="sheet">
+  <div class="stage-bar">
+    <div class="eyebrow">PROTOTYPE 085-01 · 2026-11-28</div>
+    <h1>对比差异 · 顶部要压到多高</h1>
+    <p>现在顶部 <b>154px</b> 之后才看到表格（有结果时 <b>194px</b>）：标题栏 40、配置区 114（上下各 12 + 48 文件槽 + 10 间距 + 32 控件行）、统计行 40。下面五张都是同一份数据（客户 / 订单号 / 金额 / 状态），只改顶部结构；红色虚线是现状的表格起点，绿色虚线是各方案的起点。</p>
+  </div>
+
+  <dl class="direction">
+    <div><dt>Product</dt><dd>逐行核对两份 CSV 的桌面工具</dd></div>
+    <div><dt>Character</dt><dd>精确 · 安静 · 像仪器读数</dd></div>
+    <div><dt>World</dt><dd>工作台：账本纸、刻度尺、等宽数字</dd></div>
+    <div><dt>Moments</dt><dd>差异表：改动单元格的琥珀竖线与旧/新双行</dd></div>
+    <div><dt>Signature</dt><dd>左侧记号 ≈ + − ~ 与 A/B 双行号</dd></div>
+  </dl>
+
+  <!-- ── 现状 ───────────────────────────── -->
+  <section class="frame">
+    <div class="cap"><b>现状 · 两行配置 + 独立标题栏</b><span>表格起点 194px（无结果时 154px）</span><span class="file">top: 40 + 114 + 40</span></div>
+    <div class="app">
+      <div class="topbar">
+        <div class="brand"><span class="mark"></span><span class="nm">Easy Csv</span></div>
+        <span class="m">文件</span><span class="m">编辑</span><span class="m">查看</span><span class="m" style="background:color-mix(in oklab,var(--brand) 18%,transparent)">工具</span><span class="m">帮助</span>
+        <span class="spacer"></span>
+        <span class="cmdfield"><span class="mono" style="color:var(--muted-fg-2)">›</span><span>搜索命令</span><span class="spacer"></span><span class="key">Ctrl F</span></span>
+        <span class="iconbtn"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg></span>
+        <span class="iconbtn"><svg viewBox="0 0 24 24"><path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2 2 2 0 1 1-4 0 1.7 1.7 0 0 0-2.9-1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.7 1.7 0 0 0 2.6 15a2 2 0 1 1 0-4 1.7 1.7 0 0 0 1.5-2.6l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.7 1.7 0 0 0 9.8 4.6a2 2 0 1 1 4 0A1.7 1.7 0 0 0 16.6 6l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9Z"/></svg></span>
+      </div>
+
+      <div class="diff">
+        <div class="viewbar">
+          <h3>对比差异</h3>
+          <span class="close"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></span>
+        </div>
+
+        <div class="config">
+          <div class="files">
+            <div class="slot">
+              <span class="side">A</span>
+              <span class="meta"><span class="name">orders-2026-10.csv</span><span class="path">D:\work\q4\orders-2026-10.csv</span></span>
+              <span class="open">打开</span>
+            </div>
+            <div class="slot">
+              <span class="side">B</span>
+              <span class="meta"><span class="name">orders-2026-11.csv</span><span class="path">D:\work\q4\orders-2026-11.csv</span></span>
+              <span class="open">打开</span>
+            </div>
+          </div>
+          <div class="row2">
+            <span class="lbl">分隔符</span>
+            <span class="select"><span class="mono">,</span><svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></span>
+            <span class="vrule"></span>
+            <span class="lbl">关键列</span>
+            <div class="chips">
+              <span class="chip sel">客户 <span class="x">×</span></span>
+              <span class="chip sel">订单号 <span class="x">×</span></span>
+              <span class="chip">金额</span><span class="chip">状态</span><span class="chip">地区</span>
+            </div>
+            <span class="btn btn-primary push">对比</span>
+          </div>
+        </div>
+
+        <div class="stats">
+          <span class="stat"><span class="mk ok">+</span>新增 <span class="v">2</span></span>
+          <span class="stat"><span class="mk bad">−</span>移除 <span class="v">1</span></span>
+          <span class="stat"><span class="mk warn">~</span>修改 <span class="v">3</span></span>
+          <span class="stat"><span class="mk eq">≈</span>相同 <span class="v">1,284</span></span>
+          <span class="stat">耗时 <span class="v">0.42s</span></span>
+          <span class="right"><span>1–6 / 1,290</span><span style="color:var(--muted-fg-3)">‹ ›</span></span>
+        </div>
+
+        <div class="tbl">
+          <table class="d">
+            <colgroup><col style="width:64px"><col style="width:26%"><col style="width:24%"><col style="width:25%"><col></colgroup>
+            <thead><tr><th class="g">#</th><th>客户</th><th>订单号</th><th>金额</th><th>状态</th></tr></thead>
+            <tbody>
+              <tr>
+                <td class="g"><div class="gwrap"><span class="mk ok">+</span><span class="lines"><span>—</span><span>1204</span></span></div></td>
+                <td>杭州云帆科技</td><td class="mono muted">SO-2026-1104</td><td class="mono">¥ 18,400.00</td><td>待发货</td>
+              </tr>
+              <tr>
+                <td class="g"><div class="gwrap"><span class="mk bad">−</span><span class="lines"><span>1188</span><span>—</span></span></div></td>
+                <td class="muted">苏州青禾贸易</td><td class="mono muted">SO-2026-1088</td><td class="mono muted">¥ 6,250.00</td><td class="muted">已完成</td>
+              </tr>
+              <tr>
+                <td class="g"><div class="gwrap"><span class="mk warn">~</span><span class="lines"><span>1192</span><span>1196</span></span></div></td>
+                <td>上海砚川设计</td><td class="mono muted">SO-2026-1092</td>
+                <td class="cellmod"><div class="old">¥ 12,800.00</div><div class="new">¥ 13,150.00</div></td>
+                <td>已发货</td>
+              </tr>
+              <tr class="eqrow">
+                <td class="g"><div class="gwrap"><span class="mk eq">≈</span></div></td>
+                <td colspan="4"><div class="eqtext"><span>1,284 行相同</span><span class="range">A 1–1284 · B 1–1284</span></div></td>
+              </tr>
+              <tr>
+                <td class="g"><div class="gwrap"><span class="mk warn">~</span><span class="lines"><span>1286</span><span>1290</span></span></div></td>
+                <td>南京知野文化</td><td class="mono muted">SO-2026-1186</td>
+                <td class="cellmod"><div class="old">¥ 3,980.00</div><div class="new">¥ 4,120.00</div></div></td>
+                <td>待发货</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="cut red" style="top:194px"><span class="tag">表格起点 194px</span></div>
+      </div>
+    </div>
+    <p class="note">问题不在单个数值，而在<b>两行都站着说话</b>：标题栏只有「对比差异」四个字和 ×，却占 40；配置区上下各 12、文件槽 48、控件行再 32，加起来 114；而文件槽在宽窗口里一半是空的。结果行再来 40，表格要到 194 才开始。</p>
+  </section>
+
+  <!-- ── 方案 A1 ───────────────────────────── -->
+  <section class="frame">
+    <div class="cap"><b>方案 A1 · 单行工具条 + 行内关键列</b><span>表格起点 84px（省 110px）</span><span class="file">top: 44 + 40</span></div>
+    <div class="app">
+      <div class="topbar">
+        <div class="brand"><span class="mark"></span><span class="nm">Easy Csv</span></div>
+        <span class="m">文件</span><span class="m">编辑</span><span class="m">查看</span><span class="m" style="background:color-mix(in oklab,var(--brand) 18%,transparent)">工具</span><span class="m">帮助</span>
+        <span class="spacer"></span>
+        <span class="cmdfield"><span class="mono" style="color:var(--muted-fg-2)">›</span><span>搜索命令</span><span class="spacer"></span><span class="key">Ctrl F</span></span>
+        <span class="iconbtn"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg></span>
+      </div>
+
+      <div class="diff">
+        <div class="toolbar">
+          <span class="fbtn"><span class="side">A</span><span class="nm">orders-2026-10.csv</span></span>
+          <span class="fbtn"><span class="side">B</span><span class="nm">orders-2026-11.csv</span></span>
+          <span class="vrule"></span>
+          <span class="select"><span class="mono">,</span><svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></span>
+          <span class="vrule"></span>
+          <div class="chips">
+            <span class="chip sel">客户 <span class="x">×</span></span>
+            <span class="chip sel">订单号 <span class="x">×</span></span>
+            <span class="chip">金额</span><span class="chip">状态</span>
+          </div>
+          <span class="btn btn-primary">对比</span>
+          <span class="xbtn"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></span>
+        </div>
+
+        <div class="stats">
+          <span class="stat"><span class="mk ok">+</span>新增 <span class="v">2</span></span>
+          <span class="stat"><span class="mk bad">−</span>移除 <span class="v">1</span></span>
+          <span class="stat"><span class="mk warn">~</span>修改 <span class="v">3</span></span>
+          <span class="stat"><span class="mk eq">≈</span>相同 <span class="v">1,284</span></span>
+          <span class="stat">耗时 <span class="v">0.42s</span></span>
+          <span class="right"><span>1–6 / 1,290</span><span style="color:var(--muted-fg-3)">‹ ›</span></span>
+        </div>
+
+        <div class="tbl">
+          <table class="d">
+            <colgroup><col style="width:64px"><col style="width:26%"><col style="width:24%"><col style="width:25%"><col></colgroup>
+            <thead><tr><th class="g">#</th><th>客户</th><th>订单号</th><th>金额</th><th>状态</th></tr></thead>
+            <tbody>
+              <tr>
+                <td class="g"><div class="gwrap"><span class="mk ok">+</span><span class="lines"><span>—</span><span>1204</span></span></div></td>
+                <td>杭州云帆科技</td><td class="mono muted">SO-2026-1104</td><td class="mono">¥ 18,400.00</td><td>待发货</td>
+              </tr>
+              <tr>
+                <td class="g"><div class="gwrap"><span class="mk bad">−</span><span class="lines"><span>1188</span><span>—</span></span></div></td>
+                <td class="muted">苏州青禾贸易</td><td class="mono muted">SO-2026-1088</td><td class="mono muted">¥ 6,250.00</td><td class="muted">已完成</td>
+              </tr>
+              <tr>
+                <td class="g"><div class="gwrap"><span class="mk warn">~</span><span class="lines"><span>1192</span><span>1196</span></span></div></td>
+                <td>上海砚川设计</td><td class="mono muted">SO-2026-1092</td>
+                <td class="cellmod"><div class="old">¥ 12,800.00</div><div class="new">¥ 13,150.00</div></td>
+                <td>已发货</td>
+              </tr>
+              <tr class="eqrow">
+                <td class="g"><div class="gwrap"><span class="mk eq">≈</span></div></td>
+                <td colspan="4"><div class="eqtext"><span>1,284 行相同</span><span class="range">A 1–1284 · B 1–1284</span></div></td>
+              </tr>
+              <tr>
+                <td class="g"><div class="gwrap"><span class="mk warn">~</span><span class="lines"><span>1286</span><span>1290</span></span></div></td>
+                <td>南京知野文化</td><td class="mono muted">SO-2026-1186</td>
+                <td class="cellmod"><div class="old">¥ 3,980.00</div><div class="new">¥ 4,120.00</div></div></td>
+                <td>待发货</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="cut good" style="top:84px"><span class="tag">表格起点 84px</span></div>
+      </div>
+    </div>
+    <p class="note">标题栏被取消：<b>「对比差异」这四个字不再单独占一行</b>，A/B 文件槽和「对比」按钮已经说明这是什么。文件槽从 48 的盒子压成 32 的胶囊，整条路径进 tooltip；关键列 chip 接在分隔符后面，列多时横向裁切（第二行不出现）。风险：顶部没有一行「标题」当锚，窄窗口下 A/B 名字会先被截断。</p>
+  </section>
+
+  <!-- ── 方案 A2 ───────────────────────────── -->
+  <section class="frame">
+    <div class="cap"><b>方案 A2 · 单行工具条 + 关键列下拉</b><span>表格起点 84px（省 110px）</span><span class="file">top: 44 + 40</span></div>
+    <div class="app">
+      <div class="topbar">
+        <div class="brand"><span class="mark"></span><span class="nm">Easy Csv</span></div>
+        <span class="m">文件</span><span class="m">编辑</span><span class="m">查看</span><span class="m" style="background:color-mix(in oklab,var(--brand) 18%,transparent)">工具</span><span class="m">帮助</span>
+        <span class="spacer"></span>
+        <span class="cmdfield"><span class="mono" style="color:var(--muted-fg-2)">›</span><span>搜索命令</span><span class="spacer"></span><span class="key">Ctrl F</span></span>
+        <span class="iconbtn"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg></span>
+      </div>
+
+      <div class="diff">
+        <div class="toolbar">
+          <span class="fbtn"><span class="side">A</span><span class="nm">orders-2026-10.csv</span></span>
+          <span class="fbtn"><span class="side">B</span><span class="nm">orders-2026-11.csv</span></span>
+          <span class="vrule"></span>
+          <span class="select"><span class="mono">,</span><svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></span>
+          <span class="kbtn">关键列 <span class="n">2</span><svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></span>
+          <span class="spacer"></span>
+          <span class="btn btn-primary">对比</span>
+          <span class="xbtn"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></span>
+        </div>
+
+        <div class="stats">
+          <span class="stat"><span class="mk ok">+</span>新增 <span class="v">2</span></span>
+          <span class="stat"><span class="mk bad">−</span>移除 <span class="v">1</span></span>
+          <span class="stat"><span class="mk warn">~</span>修改 <span class="v">3</span></span>
+          <span class="stat"><span class="mk eq">≈</span>相同 <span class="v">1,284</span></span>
+          <span class="stat">耗时 <span class="v">0.42s</span></span>
+          <span class="right"><span>1–6 / 1,290</span><span style="color:var(--muted-fg-3)">‹ ›</span></span>
+        </div>
+
+        <div class="tbl">
+          <table class="d">
+            <colgroup><col style="width:64px"><col style="width:26%"><col style="width:24%"><col style="width:25%"><col></colgroup>
+            <thead><tr><th class="g">#</th><th>客户</th><th>订单号</th><th>金额</th><th>状态</th></tr></thead>
+            <tbody>
+              <tr>
+                <td class="g"><div class="gwrap"><span class="mk ok">+</span><span class="lines"><span>—</span><span>1204</span></span></div></td>
+                <td>杭州云帆科技</td><td class="mono muted">SO-2026-1104</td><td class="mono">¥ 18,400.00</td><td>待发货</td>
+              </tr>
+              <tr>
+                <td class="g"><div class="gwrap"><span class="mk bad">−</span><span class="lines"><span>1188</span><span>—</span></span></div></td>
+                <td class="muted">苏州青禾贸易</td><td class="mono muted">SO-2026-1088</td><td class="mono muted">¥ 6,250.00</td><td class="muted">已完成</td>
+              </tr>
+              <tr>
+                <td class="g"><div class="gwrap"><span class="mk warn">~</span><span class="lines"><span>1192</span><span>1196</span></span></div></td>
+                <td>上海砚川设计</td><td class="mono muted">SO-2026-1092</td>
+                <td class="cellmod"><div class="old">¥ 12,800.00</div><div class="new">¥ 13,150.00</div></td>
+                <td>已发货</td>
+              </tr>
+              <tr class="eqrow">
+                <td class="g"><div class="gwrap"><span class="mk eq">≈</span></div></td>
+                <td colspan="4"><div class="eqtext"><span>1,284 行相同</span><span class="range">A 1–1284 · B 1–1284</span></div></td>
+              </tr>
+              <tr>
+                <td class="g"><div class="gwrap"><span class="mk warn">~</span><span class="lines"><span>1286</span><span>1290</span></span></div></td>
+                <td>南京知野文化</td><td class="mono muted">SO-2026-1186</td>
+                <td class="cellmod"><div class="old">¥ 3,980.00</div><div class="new">¥ 4,120.00</div></div></td>
+                <td>待发货</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="cut good" style="top:84px"><span class="tag">表格起点 84px</span></div>
+      </div>
+    </div>
+    <p class="note">同样的 84px，但关键列收成一个 <b>「关键列 · 2」</b>按钮：行宽不再随列名长度变化，列很多也不会在工具条里被裁成半截。代价是多一层浮层（勾选列名、点外部关闭），键盘要补 ↑↓ 与 Space。</p>
+  </section>
+
+  <!-- ── 方案 A3 · 未载入 ───────────────────────────── -->
+  <section class="frame">
+    <div class="cap"><b>方案 A 的未载入状态</b><span>表格区从 44px 开始，空状态直接顶上来</span><span class="file">no file · no key columns</span></div>
+    <div class="app">
+      <div class="topbar">
+        <div class="brand"><span class="mark"></span><span class="nm">Easy Csv</span></div>
+        <span class="m">文件</span><span class="m">编辑</span><span class="m">查看</span><span class="m" style="background:color-mix(in oklab,var(--brand) 18%,transparent)">工具</span><span class="m">帮助</span>
+        <span class="spacer"></span>
+        <span class="cmdfield"><span class="mono" style="color:var(--muted-fg-2)">›</span><span>搜索命令</span><span class="spacer"></span><span class="key">Ctrl F</span></span>
+        <span class="iconbtn"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg></span>
+      </div>
+
+      <div class="diff">
+        <div class="toolbar">
+          <span class="fbtn"><span class="side">A</span><span class="nm empty">选择文件 A</span></span>
+          <span class="fbtn"><span class="side">B</span><span class="nm empty">选择文件 B</span></span>
+          <span class="vrule"></span>
+          <span class="select"><span class="mono">,</span><svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></span>
+          <span class="spacer"></span>
+          <span class="btn btn-primary">对比</span>
+          <span class="xbtn"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></span>
+        </div>
+
+        <div class="empty">
+          <div class="lead">
+            <div class="t">选择两份 CSV 开始对比</div>
+            <div class="b">以关键列为锚逐行匹配；未指定关键列时按键列整行比较</div>
+          </div>
+          <div class="legend">
+            <div class="r"><span class="mk ok">+</span><span class="lb">新增</span><span class="ds">只在 B 中出现的行</span></div>
+            <div class="r"><span class="mk bad">−</span><span class="lb">移除</span><span class="ds">只在 A 中出现的行</span></div>
+            <div class="r"><span class="mk warn">~</span><span class="lb">修改</span><span class="ds">关键列相同，但其他列有变化</span></div>
+            <div class="r"><span class="mk eq">≈</span><span class="lb">相同</span><span class="ds">两行完全一致，按段折叠</span></div>
+          </div>
+        </div>
+
+        <div class="cut good" style="top:44px"><span class="tag">44px</span></div>
+      </div>
+    </div>
+    <p class="note">未载入时关键列不占位，<b>顶部只有 44px</b>；载入文件 A 后 key chips 才出现在工具条中段。空状态因此上移 110px，不用先滚过一层空白才看到图例。</p>
+  </section>
+
+  <!-- ── 方案 B ───────────────────────────── -->
+  <section class="frame">
+    <div class="cap"><b>方案 B · 保留标题栏 + 单行工具条</b><span>表格起点 124px（省 70px）</span><span class="file">top: 40 + 44 + 40</span></div>
+    <div class="app">
+      <div class="topbar">
+        <div class="brand"><span class="mark"></span><span class="nm">Easy Csv</span></div>
+        <span class="m">文件</span><span class="m">编辑</span><span class="m">查看</span><span class="m" style="background:color-mix(in oklab,var(--brand) 18%,transparent)">工具</span><span class="m">帮助</span>
+        <span class="spacer"></span>
+        <span class="cmdfield"><span class="mono" style="color:var(--muted-fg-2)">›</span><span>搜索命令</span><span class="spacer"></span><span class="key">Ctrl F</span></span>
+        <span class="iconbtn"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg></span>
+      </div>
+
+      <div class="diff">
+        <div class="viewbar">
+          <h3>对比差异</h3>
+          <span class="close"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></span>
+        </div>
+
+        <div class="toolbar">
+          <span class="fbtn"><span class="side">A</span><span class="nm">orders-2026-10.csv</span></span>
+          <span class="fbtn"><span class="side">B</span><span class="nm">orders-2026-11.csv</span></span>
+          <span class="vrule"></span>
+          <span class="select"><span class="mono">,</span><svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></span>
+          <span class="vrule"></span>
+          <div class="chips">
+            <span class="chip sel">客户 <span class="x">×</span></span>
+            <span class="chip sel">订单号 <span class="x">×</span></span>
+            <span class="chip">金额</span><span class="chip">状态</span>
+          </div>
+          <span class="btn btn-primary">对比</span>
+        </div>
+
+        <div class="stats">
+          <span class="stat"><span class="mk ok">+</span>新增 <span class="v">2</span></span>
+          <span class="stat"><span class="mk bad">−</span>移除 <span class="v">1</span></span>
+          <span class="stat"><span class="mk warn">~</span>修改 <span class="v">3</span></span>
+          <span class="stat"><span class="mk eq">≈</span>相同 <span class="v">1,284</span></span>
+          <span class="stat">耗时 <span class="v">0.42s</span></span>
+          <span class="right"><span>1–6 / 1,290</span><span style="color:var(--muted-fg-3)">‹ ›</span></span>
+        </div>
+
+        <div class="tbl">
+          <table class="d">
+            <colgroup><col style="width:64px"><col style="width:26%"><col style="width:24%"><col style="width:25%"><col></colgroup>
+            <thead><tr><th class="g">#</th><th>客户</th><th>订单号</th><th>金额</th><th>状态</th></tr></thead>
+            <tbody>
+              <tr>
+                <td class="g"><div class="gwrap"><span class="mk ok">+</span><span class="lines"><span>—</span><span>1204</span></span></div></td>
+                <td>杭州云帆科技</td><td class="mono muted">SO-2026-1104</td><td class="mono">¥ 18,400.00</td><td>待发货</td>
+              </tr>
+              <tr>
+                <td class="g"><div class="gwrap"><span class="mk bad">−</span><span class="lines"><span>1188</span><span>—</span></span></div></td>
+                <td class="muted">苏州青禾贸易</td><td class="mono muted">SO-2026-1088</td><td class="mono muted">¥ 6,250.00</td><td class="muted">已完成</td>
+              </tr>
+              <tr>
+                <td class="g"><div class="gwrap"><span class="mk warn">~</span><span class="lines"><span>1192</span><span>1196</span></span></div></td>
+                <td>上海砚川设计</td><td class="mono muted">SO-2026-1092</td>
+                <td class="cellmod"><div class="old">¥ 12,800.00</div><div class="new">¥ 13,150.00</div></td>
+                <td>已发货</td>
+              </tr>
+              <tr class="eqrow">
+                <td class="g"><div class="gwrap"><span class="mk eq">≈</span></div></td>
+                <td colspan="4"><div class="eqtext"><span>1,284 行相同</span><span class="range">A 1–1284 · B 1–1284</span></div></td>
+              </tr>
+              <tr>
+                <td class="g"><div class="gwrap"><span class="mk warn">~</span><span class="lines"><span>1286</span><span>1290</span></span></div></td>
+                <td>南京知野文化</td><td class="mono muted">SO-2026-1186</td>
+                <td class="cellmod"><div class="old">¥ 3,980.00</div><div class="new">¥ 4,120.00</div></div></td>
+                <td>待发货</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="cut good" style="top:124px"><span class="tag">表格起点 124px</span></div>
+      </div>
+    </div>
+    <p class="note">如果你觉得「顶部必须有一行标题」，选 B：40px 的标题栏保留（关闭键仍在右上），下面压成一行 44px。比现状省 70px，代价是仍有一条只有四个字的空行。</p>
+  </section>
+
+  <!-- ── 方案 C ───────────────────────────── -->
+  <section class="frame">
+    <div class="cap"><b>方案 C · 只收紧留白</b><span>表格起点 168px（省 26px）</span><span class="file">top: 32 + 96 + 40</span></div>
+    <div class="app">
+      <div class="topbar">
+        <div class="brand"><span class="mark"></span><span class="nm">Easy Csv</span></div>
+        <span class="m">文件</span><span class="m">编辑</span><span class="m">查看</span><span class="m" style="background:color-mix(in oklab,var(--brand) 18%,transparent)">工具</span><span class="m">帮助</span>
+        <span class="spacer"></span>
+        <span class="cmdfield"><span class="mono" style="color:var(--muted-fg-2)">›</span><span>搜索命令</span><span class="spacer"></span><span class="key">Ctrl F</span></span>
+        <span class="iconbtn"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg></span>
+      </div>
+
+      <div class="diff">
+        <div class="viewbar" style="height:32px">
+          <h3>对比差异</h3>
+          <span class="close"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></span>
+        </div>
+
+        <div class="config" style="padding:8px 16px">
+          <div class="files">
+            <div class="slot" style="height:40px;border-radius:8px">
+              <span class="side">A</span>
+              <span class="meta"><span class="name">orders-2026-10.csv</span></span>
+              <span class="open">打开</span>
+            </div>
+            <div class="slot" style="height:40px;border-radius:8px">
+              <span class="side">B</span>
+              <span class="meta"><span class="name">orders-2026-11.csv</span></span>
+              <span class="open">打开</span>
+            </div>
+          </div>
+          <div class="row2" style="margin-top:8px">
+            <span class="lbl">分隔符</span>
+            <span class="select"><span class="mono">,</span><svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></span>
+            <span class="vrule"></span>
+            <span class="lbl">关键列</span>
+            <div class="chips">
+              <span class="chip sel">客户 <span class="x">×</span></span>
+              <span class="chip sel">订单号 <span class="x">×</span></span>
+              <span class="chip">金额</span><span class="chip">状态</span><span class="chip">地区</span>
+            </div>
+            <span class="btn btn-primary push">对比</span>
+          </div>
+        </div>
+
+        <div class="stats">
+          <span class="stat"><span class="mk ok">+</span>新增 <span class="v">2</span></span>
+          <span class="stat"><span class="mk bad">−</span>移除 <span class="v">1</span></span>
+          <span class="stat"><span class="mk warn">~</span>修改 <span class="v">3</span></span>
+          <span class="stat"><span class="mk eq">≈</span>相同 <span class="v">1,284</span></span>
+          <span class="right"><span>1–6 / 1,290</span><span style="color:var(--muted-fg-3)">‹ ›</span></span>
+        </div>
+
+        <div class="tbl">
+          <table class="d">
+            <colgroup><col style="width:64px"><col style="width:26%"><col style="width:24%"><col style="width:25%"><col></colgroup>
+            <thead><tr><th class="g">#</th><th>客户</th><th>订单号</th><th>金额</th><th>状态</th></tr></thead>
+            <tbody>
+              <tr>
+                <td class="g"><div class="gwrap"><span class="mk ok">+</span><span class="lines"><span>—</span><span>1204</span></span></div></td>
+                <td>杭州云帆科技</td><td class="mono muted">SO-2026-1104</td><td class="mono">¥ 18,400.00</td><td>待发货</td>
+              </tr>
+              <tr>
+                <td class="g"><div class="gwrap"><span class="mk bad">−</span><span class="lines"><span>1188</span><span>—</span></span></div></td>
+                <td class="muted">苏州青禾贸易</td><td class="mono muted">SO-2026-1088</td><td class="mono muted">¥ 6,250.00</td><td class="muted">已完成</td>
+              </tr>
+              <tr>
+                <td class="g"><div class="gwrap"><span class="mk warn">~</span><span class="lines"><span>1192</span><span>1196</span></span></div></td>
+                <td>上海砚川设计</td><td class="mono muted">SO-2026-1092</td>
+                <td class="cellmod"><div class="old">¥ 12,800.00</div><div class="new">¥ 13,150.00</div></td>
+                <td>已发货</td>
+              </tr>
+              <tr class="eqrow">
+                <td class="g"><div class="gwrap"><span class="mk eq">≈</span></div></td>
+                <td colspan="4"><div class="eqtext"><span>1,284 行相同</span><span class="range">A 1–1284 · B 1–1284</span></div></td>
+              </tr>
+              <tr>
+                <td class="g"><div class="gwrap"><span class="mk warn">~</span><span class="lines"><span>1286</span><span>1290</span></span></div></td>
+                <td>南京知野文化</td><td class="mono muted">SO-2026-1186</td>
+                <td class="cellmod"><div class="old">¥ 3,980.00</div><div class="new">¥ 4,120.00</div></div></td>
+                <td>待发货</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="cut good" style="top:168px"><span class="tag">表格起点 168px</span></div>
+      </div>
+    </div>
+    <p class="note">结构完全不动，只把标题栏 40→32、文件槽 48→40、上下内边距 12→8，并把完整路径从槽里拿掉。省 26px；两行配置的节奏还在，宽窗口里文件槽依旧空。</p>
+  </section>
+
+  <!-- ── 对比表 ───────────────────────────── -->
+  <section class="frame">
+    <div class="cap"><b>四张放在一起</b><span>表格起点越早，差异越早出现在视野里</span><span class="file">有结果时</span></div>
+    <table class="cmp">
+      <thead>
+        <tr><th style="width:210px">方案</th><th>标题栏</th><th>配置区</th><th>统计行</th><th>表格起点</th><th>省下</th><th>代价</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>现状</td><td class="num">40</td><td class="num">114 · 两行</td><td class="num">40</td><td class="num">194</td><td class="num">—</td><td>顶部像一张空表格的表头</td></tr>
+        <tr><td class="pick">A · 单行工具条</td><td class="num">—</td><td class="num">44 · 一行</td><td class="num">40</td><td class="num">84</td><td class="num">110</td><td>没有标题，窄窗下文件名先截断</td></tr>
+        <tr><td>B · 标题 + 单行</td><td class="num">40</td><td class="num">44 · 一行</td><td class="num">40</td><td class="num">124</td><td class="num">70</td><td>仍有一条只有四个字的空行</td></tr>
+        <tr><td>C · 只收紧留白</td><td class="num">32</td><td class="num">96 · 两行</td><td class="num">40</td><td class="num">168</td><td class="num">26</td><td>两行配置没解决，改善最小</td></tr>
+      </tbody>
+    </table>
+    <p class="note">共同规则（A/B 都适用）：文件槽从 48 的盒子改成 32 的胶囊，<b>整条路径只进 tooltip</b>；分隔符不再带「分隔符」三个字（下拉里本来就是「逗号 / 制表符」）；关键列 chip 只在载入文件 A 后才出现；「对比」是工具条里唯一的主操作，`Esc` 仍是关闭视图的第二条路。</p>
+  </section>
+</div>
+</body>
+</html>

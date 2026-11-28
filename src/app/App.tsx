@@ -1804,6 +1804,10 @@ function AppContent() {
                   onShowSettings={onShowSettings}
                   onOpenPalette={() => ui.setShowCommandPalette(true)}
                   onOpenCsvDiff={() => {
+                    // Design 085: the comparison is a workspace view, so its
+                    // menu entry stays reachable while it is open. Picking it
+                    // again must not wipe the file slots and the result.
+                    if (ui.showCsvDiff) return;
                     ui.setCsvDiffInitialFileA(
                       tabsHook.getCurrentTab()?.inputFile || undefined,
                     );

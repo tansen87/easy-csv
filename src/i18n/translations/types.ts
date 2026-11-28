@@ -727,6 +727,8 @@ export interface Translations {
   csvDiffNoResult: string;
   csvDiffEmptyTitle: string;
   csvDiffEmptyBody: string;
+  /** Reopens the settings popover from the summary line of a finished compare. */
+  csvDiffEdit: string;
   csvDiffUnchanged: string;
   csvDiffLegendAdded: string;
   csvDiffLegendRemoved: string;

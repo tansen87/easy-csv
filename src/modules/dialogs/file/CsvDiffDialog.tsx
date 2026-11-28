@@ -123,7 +123,10 @@ export function CsvDiffDialog({
   /** This dialog started it, or a previous run outlived the dialog. */
   const busy = isComparing || running;
   const [error, setError] = useState<string | null>(null);
+  /** Design 085 · D: settings live in a popover, not in a permanent toolbar. */
+  const [editing, setEditing] = useState(false);
   const dialogRef = useRef<HTMLDivElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
   /** Latest `isOpen` for an in-flight compare: a closed dialog still finishes. */
   const isOpenRef = useRef(isOpen);
   isOpenRef.current = isOpen;
@@ -138,6 +141,7 @@ export function CsvDiffDialog({
       setDelimiter(defaultDelimiter || ",");
       setKeyColumns([]);
       setPage(0);
+      setEditing(false);
     }
   }, [isOpen, initialFileA, defaultDelimiter]);
 
@@ -171,12 +175,36 @@ export function CsvDiffDialog({
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        onClose();
+      if (e.key !== "Escape") return;
+      // The settings popover is the innermost surface: its Escape closes it and
+      // nothing else.
+      if (editing) {
+        setEditing(false);
+        return;
       }
+      // Design 085: this is a workspace view, not a modal - the menu bar stays
+      // live above it. A menu or a dialog opened from that bar owns Escape;
+      // closing both at once would be a surprise.
+      if (document.querySelector('[role="menu"], [role="dialog"]')) return;
+      onClose();
     },
-    [onClose],
+    [editing, onClose],
   );
+
+  // A click anywhere outside the popover (or its triggers) puts it away; the
+  // table behind stays usable, so this is not a backdrop.
+  useEffect(() => {
+    if (!isOpen || !editing) return;
+    const onPointerDown = (event: PointerEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (popoverRef.current?.contains(target)) return;
+      if (target?.closest("[data-diff-edit]")) return;
+      setEditing(false);
+    };
+    document.addEventListener("pointerdown", onPointerDown, true);
+    return () =>
+      document.removeEventListener("pointerdown", onPointerDown, true);
+  }, [isOpen, editing]);
 
   useEffect(() => {
     if (isOpen) {
@@ -222,6 +250,7 @@ export function CsvDiffDialog({
       setResult(data);
       setElapsedMs(performance.now() - startedAt);
       setPage(0);
+      setEditing(false);
       if (!isOpenRef.current) {
         onShowToast?.(`${t.toolFinished}: ${t.csvDiff}`, "success");
       }
@@ -405,200 +434,201 @@ export function CsvDiffDialog({
       ]
     : [];
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-5">
-      <div
-        className="absolute inset-0 bg-black/20"
-        onClick={onClose}
-        onContextMenu={(e) => e.preventDefault()}
-      />
-      <div
-        ref={dialogRef}
-        role="dialog"
-        aria-modal="true"
-        tabIndex={-1}
-        className="relative flex h-full w-full flex-col overflow-hidden rounded-lg border border-border/60 bg-card shadow-xl outline-none"
-        onClick={(e) => e.stopPropagation()}
-        onContextMenu={(e) => e.preventDefault()}
-      >
-        <div className="flex h-[52px] shrink-0 items-center border-b border-border/60 px-4">
-          <h3 className="text-[13px] font-medium text-foreground">
-            {t.csvDiff}
-          </h3>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            className="ml-auto h-7 w-7 text-muted-foreground"
-            onClick={onClose}
-            aria-label={t.close}
-          >
-            <X className="h-3.5 w-3.5" />
-          </Button>
-        </div>
+  /** Names of the columns used as keys, for the one-line summary. */
+  const keyColumnNames =
+    headersA && keyColumns.length > 0
+      ? keyColumns
+          .map((i) => headersA[i])
+          .filter((name): name is string => Boolean(name))
+          .join(" · ")
+      : "";
 
-        {/* File slots, delimiter and key columns */}
-        <div className="shrink-0 border-b border-border/60 px-4 pt-3.5 pb-3">
-          <div className="flex gap-2.5">
-            {[
-              {
-                side: "A",
-                file: fileA,
-                placeholder: t.csvDiffFileAPlaceholder,
-                browse: () => browseFile("a"),
-              },
-              {
-                side: "B",
-                file: fileB,
-                placeholder: t.csvDiffFileBPlaceholder,
-                browse: () => browseFile("b"),
-              },
-            ].map((slot) => (
-              <div
-                key={slot.side}
-                className="flex h-12 min-w-0 flex-1 items-center gap-2.5 rounded-lg border border-border/70 bg-background px-2.5"
+  const renderKeyColumnChips = (chipsClassName: string) =>
+    headersA && headersA.length > 0 ? (
+      <div
+        className={cn(
+          "flex min-w-0 items-center gap-1.5",
+          chipsClassName,
+        )}
+      >
+        {headersA.map((h, i) => {
+          const selected = keyColumns.includes(i);
+          return (
+            <button
+              key={`kc-${i}`}
+              type="button"
+              onClick={() => toggleKeyColumn(i)}
+              className={cn(
+                "h-6 shrink-0 rounded-md border px-2 text-[11px] transition-colors",
+                selected
+                  ? "border-primary/40 bg-primary/10 text-primary"
+                  : "border-border/70 text-muted-foreground hover:bg-muted hover:text-foreground",
+              )}
+            >
+              {h || `#${i + 1}`}
+              {selected ? <span className="ml-1 opacity-70">×</span> : null}
+            </button>
+          );
+        })}
+      </div>
+    ) : (
+      <span className="min-w-0 truncate text-[11px] text-muted-foreground">
+        {t.keyColumnsHint}
+      </span>
+    );
+
+  const renderDelimiter = () => (
+    <Select
+      value={delimiter}
+      onChange={setDelimiter}
+      options={[
+        { value: ",", label: t.splitComma },
+        { value: "\t", label: t.splitTab },
+        { value: ";", label: t.splitSemicolon },
+        { value: "|", label: t.splitPipe },
+      ]}
+      size="sm"
+      ariaLabel={t.delimiter}
+    />
+  );
+
+  const renderFileRow = (
+    side: "a" | "b",
+    file: string,
+    placeholder: string,
+  ) => (
+    <div className="flex min-w-0 items-center gap-2">
+      <span className="grid h-[18px] w-[18px] shrink-0 place-items-center rounded border border-border/70 font-mono text-[10px] leading-none text-muted-foreground">
+        {side.toUpperCase()}
+      </span>
+      <div className="min-w-0 flex-1">
+        <div
+          className={cn(
+            "truncate text-xs",
+            file ? "font-medium text-foreground" : "text-muted-foreground",
+          )}
+        >
+          {file ? fileNameOf(file) : placeholder}
+        </div>
+        {file ? (
+          <div className="truncate font-mono text-[10px] leading-[14px] text-muted-foreground">
+            {file}
+          </div>
+        ) : null}
+      </div>
+      <Button
+        variant="ghost"
+        size="xs"
+        className="shrink-0 px-1.5 font-normal text-[11px] text-muted-foreground hover:text-primary"
+        onClick={() => void browseFile(side)}
+      >
+        {t.open}
+      </Button>
+    </div>
+  );
+
+  const closeButton = (
+    <Button
+      variant="ghost"
+      size="icon-sm"
+      className="h-7 w-7 shrink-0 text-muted-foreground"
+      onClick={onClose}
+      aria-label={t.close}
+    >
+      <X className="h-3.5 w-3.5" />
+    </Button>
+  );
+
+  return (
+    // Design 085 · D: a workspace view, not an overlay. It starts where the menu
+    // bar ends and stays under the chrome layer, so the bar keeps working above
+    // it. There is no permanent toolbar: before the first compare the empty
+    // state *is* the settings form, and afterwards the top collapses to a
+    // single readable sentence.
+    <div
+      ref={dialogRef}
+      role="region"
+      aria-label={t.csvDiff}
+      tabIndex={-1}
+      className="absolute inset-x-0 top-9 bottom-0 z-floating flex flex-col overflow-hidden bg-card outline-none"
+      onContextMenu={(e) => e.preventDefault()}
+    >
+      {result ? (
+        <>
+          <div className="flex h-9 shrink-0 items-center gap-2 border-b border-border/60 pr-1.5 pl-4">
+            <div className="flex min-w-0 flex-1 items-center gap-2">
+              <button
+                type="button"
+                data-diff-edit
+                title={fileA}
+                onClick={() => setEditing(true)}
+                className="flex min-w-0 max-w-[230px] items-center gap-1.5 rounded-md px-1.5 py-1 transition-colors hover:bg-muted"
               >
                 <span className="grid h-[18px] w-[18px] shrink-0 place-items-center rounded border border-border/70 font-mono text-[10px] leading-none text-muted-foreground">
-                  {slot.side}
+                  A
                 </span>
-                <div className="min-w-0 flex-1">
-                  <div
-                    className={cn(
-                      "truncate text-xs",
-                      slot.file
-                        ? "font-medium text-foreground"
-                        : "text-muted-foreground",
-                    )}
-                  >
-                    {slot.file ? fileNameOf(slot.file) : slot.placeholder}
-                  </div>
-                  {slot.file ? (
-                    <div className="truncate font-mono text-[10px] leading-[14px] text-muted-foreground">
-                      {slot.file}
-                    </div>
-                  ) : null}
-                </div>
-                <Button
-                  variant="ghost"
-                  size="xs"
-                  className="shrink-0 px-1.5 font-normal text-[11px] text-muted-foreground hover:text-primary"
-                  onClick={slot.browse}
-                >
-                  {t.open}
-                </Button>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-2.5 flex min-w-0 items-center gap-2.5">
-            <span className="shrink-0 text-[11px] text-muted-foreground">
-              {t.delimiter}
-            </span>
-            <div className="w-[104px] shrink-0">
-              <Select
-                value={delimiter}
-                onChange={setDelimiter}
-                options={[
-                  { value: ",", label: t.splitComma },
-                  { value: "\t", label: t.splitTab },
-                  { value: ";", label: t.splitSemicolon },
-                  { value: "|", label: t.splitPipe },
-                ]}
-                size="sm"
-                ariaLabel={t.delimiter}
-              />
-            </div>
-            <div className="mx-1 h-[18px] w-px shrink-0 bg-border" />
-            <span className="shrink-0 text-[11px] text-muted-foreground">
-              {t.keyColumns}
-            </span>
-            {headersA && headersA.length > 0 ? (
-              <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-                {headersA.map((h, i) => {
-                  const selected = keyColumns.includes(i);
-                  return (
-                    <button
-                      key={`kc-${i}`}
-                      type="button"
-                      onClick={() => toggleKeyColumn(i)}
-                      className={cn(
-                        "h-6 shrink-0 rounded-md border px-2 text-[11px] transition-colors",
-                        selected
-                          ? "border-primary/40 bg-primary/10 text-primary"
-                          : "border-border/70 text-muted-foreground hover:bg-muted hover:text-foreground",
-                      )}
-                    >
-                      {h || `#${i + 1}`}
-                      {selected ? (
-                        <span className="ml-1 opacity-70">×</span>
-                      ) : null}
-                    </button>
-                  );
-                })}
-              </div>
-            ) : (
-              <span className="min-w-0 truncate text-[11px] text-muted-foreground">
-                {t.keyColumnsHint}
+                <span className="truncate text-xs font-medium">
+                  {fileNameOf(fileA)}
+                </span>
+              </button>
+              <span className="shrink-0 text-[11px] text-muted-foreground/60">
+                ↔
               </span>
-            )}
-            <Button
-              size="sm"
-              className="ml-auto shrink-0 gap-1.5"
-              onClick={handleCompare}
-              disabled={busy}
-            >
-              {busy && (
-                <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-              )}
-              {t.compare}
-            </Button>
-          </div>
-        </div>
-
-        {error && (
-          <div className="shrink-0 border-b border-border/60 px-4 py-2 text-[11px] text-danger">
-            {error}
-          </div>
-        )}
-
-        {result && (
-          <div className="flex h-10 shrink-0 items-center gap-4 border-b border-border/60 px-4">
-            {stats.map((stat) => (
-              <span
-                key={stat.label}
-                className="inline-flex items-baseline gap-1.5 text-[11px] text-muted-foreground"
+              <button
+                type="button"
+                data-diff-edit
+                title={fileB}
+                onClick={() => setEditing(true)}
+                className="flex min-w-0 max-w-[230px] items-center gap-1.5 rounded-md px-1.5 py-1 transition-colors hover:bg-muted"
               >
+                <span className="grid h-[18px] w-[18px] shrink-0 place-items-center rounded border border-border/70 font-mono text-[10px] leading-none text-muted-foreground">
+                  B
+                </span>
+                <span className="truncate text-xs font-medium">
+                  {fileNameOf(fileB)}
+                </span>
+              </button>
+              <span className="mx-0.5 h-3.5 w-px shrink-0 bg-border" />
+              <button
+                type="button"
+                data-diff-edit
+                onClick={() => setEditing(true)}
+                className="flex min-w-0 items-center gap-1.5 rounded-md px-1.5 py-1 text-[11px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              >
+                <span className="shrink-0">{t.keyColumns}</span>
+                <span className="truncate text-foreground/80">
+                  {keyColumnNames || "—"}
+                </span>
+              </button>
+            </div>
+
+            <div className="flex shrink-0 items-center gap-2">
+              {stats.map((stat) => (
                 <span
-                  className={cn("font-mono text-xs leading-none", stat.tone)}
+                  key={stat.label}
+                  className="inline-flex items-baseline gap-1 text-[11px] text-muted-foreground"
                 >
-                  {stat.mark}
-                </span>
-                {stat.label}
-                <span className="font-mono text-[11px] tabular-nums text-foreground">
-                  {stat.value.toLocaleString()}
-                </span>
-              </span>
-            ))}
-            {elapsedMs !== null && (
-              <span className="inline-flex items-baseline gap-1.5 text-[11px] text-muted-foreground">
-                {t.elapsed}
-                <span className="font-mono text-[11px] tabular-nums text-foreground">
-                  {formatElapsed(elapsedMs)}
-                </span>
-              </span>
-            )}
-            <div className="ml-auto flex items-center gap-1">
-              {result.modified_count > 0 && (
-                <span className="mr-2.5 inline-flex items-center gap-1 text-[11px] text-muted-foreground">
-                  <span className="font-mono text-xs leading-none text-muted-foreground">
-                    ·
+                  <span
+                    className={cn("font-mono text-xs leading-none", stat.tone)}
+                  >
+                    {stat.mark}
                   </span>
-                  {t.csvDiffUnchanged}
+                  {stat.label}
+                  <span className="font-mono text-[11px] tabular-nums text-foreground">
+                    {stat.value.toLocaleString()}
+                  </span>
+                </span>
+              ))}
+              {elapsedMs !== null && (
+                <span className="hidden font-mono text-[10px] text-muted-foreground/80 min-[1080px]:inline">
+                  {formatElapsed(elapsedMs)}
                 </span>
               )}
               {totalPages > 1 && (
-                <>
-                  <span className="mr-1.5 font-mono text-[10px] tabular-nums text-muted-foreground">
-                    {pageStart + 1}–{Math.min(pageStart + PAGE_SIZE, total)} /{" "}
+                <div className="flex items-center gap-0.5">
+                  <span className="mr-1 font-mono text-[10px] tabular-nums text-muted-foreground">
+                    {pageStart + 1}–
+                    {Math.min(pageStart + PAGE_SIZE, total)} /{" "}
                     {total.toLocaleString()}
                   </span>
                   <Button
@@ -625,108 +655,234 @@ export function CsvDiffDialog({
                   >
                     <ChevronRight className="h-3.5 w-3.5" />
                   </Button>
-                </>
-              )}
-            </div>
-          </div>
-        )}
-
-        {result && headers.length > 0 ? (
-          <ScrollArea
-            className="min-h-0 flex-1"
-            type="always"
-            hideHorizontalScrollbar={!dense}
-          >
-            <table
-              className="w-full border-collapse"
-              style={{
-                tableLayout: "fixed",
-                ...(dense
-                  ? {
-                      minWidth: GUTTER_WIDTH + headers.length * DENSE_COL_WIDTH,
-                    }
-                  : {}),
-              }}
-            >
-              <colgroup>
-                <col style={{ width: GUTTER_WIDTH }} />
-                {headers.map((header, i) => (
-                  <col
-                    key={`col-${i}-${header}`}
-                    style={{
-                      width: dense
-                        ? DENSE_COL_WIDTH
-                        : `calc((100% - ${GUTTER_WIDTH}px) / ${headers.length})`,
-                    }}
-                  />
-                ))}
-              </colgroup>
-              <thead className="sticky top-0 z-[1] bg-card">
-                <tr>
-                  <th className="h-9 border-b border-r border-border/60 bg-muted px-2 text-right align-middle font-mono text-[10px] font-normal text-muted-foreground">
-                    #
-                  </th>
-                  {headers.map((header, i) => (
-                    <th
-                      key={`th-${i}`}
-                      className="h-9 border-b border-border/60 px-3 text-left align-middle text-[11px] font-medium text-muted-foreground"
-                    >
-                      <div className="truncate">{header}</div>
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>{visibleEntries.map(renderRow)}</tbody>
-            </table>
-          </ScrollArea>
-        ) : result ? (
-          <div className="flex flex-1 items-center justify-center">
-            <p className="text-xs text-muted-foreground">{t.csvDiffNoResult}</p>
-          </div>
-        ) : isComparing ? (
-          <div className="flex flex-1 items-center justify-center">
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-              <span>{t.comparing}</span>
-              <RunTimer running={isComparing} />
-            </div>
-          </div>
-        ) : (
-          <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 pb-6">
-            <div className="max-w-[540px] text-center">
-              <p className="text-[13px] font-medium text-foreground">
-                {t.csvDiffEmptyTitle}
-              </p>
-              <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                {fileA && fileB ? t.csvDiffEmptyBody : t.csvDiffNoResult}
-              </p>
-            </div>
-            <div className="w-[560px] max-w-full rounded-lg border border-border/70 bg-background px-4">
-              {legend.map((item) => (
-                <div
-                  key={item.label}
-                  className="flex h-[30px] items-center gap-3 border-b border-border/40 last:border-b-0"
-                >
-                  <span
-                    className={cn(
-                      "w-3 shrink-0 text-center font-mono text-[11px] leading-none",
-                      item.tone,
-                    )}
-                  >
-                    {item.mark}
-                  </span>
-                  <span className="w-8 shrink-0 text-[11px] text-foreground">
-                    {item.label}
-                  </span>
-                  <span className="min-w-0 truncate text-[11px] text-muted-foreground">
-                    {item.desc}
-                  </span>
                 </div>
-              ))}
+              )}
+              <button
+                type="button"
+                data-diff-edit
+                onClick={() => setEditing(true)}
+                aria-expanded={editing}
+                className="h-6 shrink-0 rounded-md px-2 text-[11px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              >
+                {t.csvDiffEdit}
+              </button>
+              {closeButton}
             </div>
           </div>
-        )}
-      </div>
+
+          {error && !editing && (
+            <div className="shrink-0 border-b border-border/60 px-4 py-2 text-[11px] text-danger">
+              {error}
+            </div>
+          )}
+
+          {headers.length > 0 ? (
+            <ScrollArea
+              className="min-h-0 flex-1"
+              type="always"
+              hideHorizontalScrollbar={!dense}
+            >
+              <table
+                className="w-full border-collapse"
+                style={{
+                  tableLayout: "fixed",
+                  ...(dense
+                    ? {
+                        minWidth:
+                          GUTTER_WIDTH + headers.length * DENSE_COL_WIDTH,
+                      }
+                    : {}),
+                }}
+              >
+                <colgroup>
+                  <col style={{ width: GUTTER_WIDTH }} />
+                  {headers.map((header, i) => (
+                    <col
+                      key={`col-${i}-${header}`}
+                      style={{
+                        width: dense
+                          ? DENSE_COL_WIDTH
+                          : `calc((100% - ${GUTTER_WIDTH}px) / ${headers.length})`,
+                      }}
+                    />
+                  ))}
+                </colgroup>
+                <thead className="sticky top-0 z-[1] bg-card">
+                  <tr>
+                    <th className="h-9 border-b border-r border-border/60 bg-muted px-2 text-right align-middle font-mono text-[10px] font-normal text-muted-foreground">
+                      #
+                    </th>
+                    {headers.map((header, i) => (
+                      <th
+                        key={`th-${i}`}
+                        className="h-9 border-b border-border/60 px-3 text-left align-middle text-[11px] font-medium text-muted-foreground"
+                      >
+                        <div className="truncate">{header}</div>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>{visibleEntries.map(renderRow)}</tbody>
+              </table>
+            </ScrollArea>
+          ) : (
+            <div className="flex flex-1 items-center justify-center">
+              <p className="text-xs text-muted-foreground">
+                {t.csvDiffNoResult}
+              </p>
+            </div>
+          )}
+        </>
+      ) : (
+        <>
+          <div className="absolute top-2.5 right-2.5 z-10">{closeButton}</div>
+          <div className="flex flex-1 overflow-y-auto px-6 py-6">
+            <div className="m-auto w-[680px] max-w-full">
+              <h2 className="text-[15px] font-medium text-foreground">
+                {t.csvDiff}
+              </h2>
+              <p className="mt-1.5 text-[11.5px] leading-relaxed text-muted-foreground">
+                {t.csvDiffEmptyBody}
+              </p>
+
+              <div className="mt-5 flex min-w-0 items-center gap-2.5">
+                {(["a", "b"] as const).map((side) => {
+                  const file = side === "a" ? fileA : fileB;
+                  const placeholder =
+                    side === "a"
+                      ? t.csvDiffFileAPlaceholder
+                      : t.csvDiffFileBPlaceholder;
+                  return (
+                    <div
+                      key={side}
+                      className="flex h-11 min-w-0 flex-1 items-center gap-2.5 rounded-lg border border-border/70 bg-background px-2.5"
+                    >
+                      <span className="grid h-[18px] w-[18px] shrink-0 place-items-center rounded border border-border/70 font-mono text-[10px] leading-none text-muted-foreground">
+                        {side.toUpperCase()}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div
+                          className={cn(
+                            "truncate text-xs",
+                            file
+                              ? "font-medium text-foreground"
+                              : "text-muted-foreground",
+                          )}
+                        >
+                          {file ? fileNameOf(file) : placeholder}
+                        </div>
+                        {file ? (
+                          <div className="truncate font-mono text-[10px] leading-[14px] text-muted-foreground">
+                            {file}
+                          </div>
+                        ) : null}
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="xs"
+                        className="shrink-0 px-1.5 font-normal text-[11px] text-muted-foreground hover:text-primary"
+                        onClick={() => void browseFile(side)}
+                      >
+                        {t.open}
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="mt-3 flex min-w-0 flex-wrap items-center gap-2.5">
+                <span className="shrink-0 text-[11px] text-muted-foreground">
+                  {t.delimiter}
+                </span>
+                <div className="w-[104px] shrink-0">{renderDelimiter()}</div>
+                <div className="mx-1 h-[18px] w-px shrink-0 bg-border" />
+                <span className="shrink-0 text-[11px] text-muted-foreground">
+                  {t.keyColumns}
+                </span>
+                {renderKeyColumnChips("flex-wrap")}
+                <div className="ml-auto flex shrink-0 items-center gap-2">
+                  {isComparing && <RunTimer running={isComparing} />}
+                  <Button
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={handleCompare}
+                    disabled={busy}
+                  >
+                    {busy && <RefreshCw className="h-3.5 w-3.5 animate-spin" />}
+                    {t.compare}
+                  </Button>
+                </div>
+              </div>
+
+              {error && (
+                <p className="mt-2 text-[11px] text-danger">{error}</p>
+              )}
+
+              <div className="mt-6 border-t border-border/60 pt-1">
+                {legend.map((item) => (
+                  <div
+                    key={item.label}
+                    className="flex h-[26px] items-center gap-3"
+                  >
+                    <span
+                      className={cn(
+                        "w-3 shrink-0 text-center font-mono text-[11px] leading-none",
+                        item.tone,
+                      )}
+                    >
+                      {item.mark}
+                    </span>
+                    <span className="w-8 shrink-0 text-[11px] text-foreground">
+                      {item.label}
+                    </span>
+                    <span className="min-w-0 truncate text-[11px] text-muted-foreground">
+                      {item.desc}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {result && editing && (
+        <div
+          ref={popoverRef}
+          className="absolute top-10 left-4 z-10 w-[520px] max-w-[calc(100%-32px)] rounded-[10px] border border-border bg-card p-3 shadow-[0_8px_24px_oklch(0.2_0.02_80_/_12%)]"
+        >
+          {renderFileRow("a", fileA, t.csvDiffFileAPlaceholder)}
+          <div className="mt-2">
+            {renderFileRow("b", fileB, t.csvDiffFileBPlaceholder)}
+          </div>
+          <div className="mt-2.5 flex min-w-0 flex-wrap items-center gap-2">
+            <span className="shrink-0 text-[11px] text-muted-foreground">
+              {t.delimiter}
+            </span>
+            <div className="w-[104px] shrink-0">{renderDelimiter()}</div>
+            <div className="mx-1 h-[18px] w-px shrink-0 bg-border" />
+            <span className="shrink-0 text-[11px] text-muted-foreground">
+              {t.keyColumns}
+            </span>
+            {renderKeyColumnChips("max-h-24 flex-wrap overflow-y-auto")}
+          </div>
+          {error && <p className="mt-2 text-[11px] text-danger">{error}</p>}
+          <div className="mt-3 flex items-center gap-2 border-t border-border/60 pt-2.5">
+            <span className="min-w-0 truncate text-[11px] text-muted-foreground/80">
+              {t.keyColumnsHint}
+            </span>
+            <Button
+              size="sm"
+              className="ml-auto shrink-0 gap-1.5"
+              onClick={handleCompare}
+              disabled={busy}
+            >
+              {busy && <RefreshCw className="h-3.5 w-3.5 animate-spin" />}
+              {t.compare}
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
