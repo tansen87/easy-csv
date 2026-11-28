@@ -1,0 +1,485 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>原型 086-04 · 方案 C 管道作业台</title>
+<style>
+  :root{
+    --font:"Inter","Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Consolas,monospace;
+
+    --bg:#fff;
+    --fg:oklch(0.145 0 0);
+    --ink-88:color-mix(in oklab, oklch(0.145 0 0) 88%, #fff);
+    --ink-4:color-mix(in oklab, oklch(0.145 0 0) 4%, transparent);
+    --muted:oklch(0.97 0 0);
+    --muted-fg:oklch(0.556 0 0);
+    --muted-fg-2:oklch(0.66 0 0);
+    --muted-fg-3:oklch(0.76 0 0);
+    --border:oklch(0.922 0 0);
+    --border-soft:oklch(0.2 0.01 80 / 8%);
+    --border-strong:oklch(0.2 0.01 80 / 22%);
+
+    --brand:oklch(0.42 0.055 250);
+    --brand-ink:oklch(0.35 0.05 250);
+    --brand-6:color-mix(in oklab, oklch(0.42 0.055 250) 6%, transparent);
+    --brand-9:color-mix(in oklab, oklch(0.42 0.055 250) 9%, transparent);
+    --brand-12:color-mix(in oklab, oklch(0.42 0.055 250) 12%, transparent);
+    --chrome:color-mix(in oklab, oklch(0.42 0.055 250) 12%, #fff);
+    --chrome-border:color-mix(in oklab, oklch(0.42 0.055 250) 30%, transparent);
+
+    --stage:oklch(0.975 0.004 85);
+    --paper:oklch(0.995 0.004 85);
+    --canvas-dot:oklch(0.2 0.01 80 / 11%);
+    --canvas-line:oklch(0.2 0.01 80 / 30%);
+    --shadow-card:0 1px 2px oklch(0.2 0.02 80 / 5%);
+    --shadow-win:0 24px 64px -34px oklch(0.2 0.02 80 / 34%),0 2px 6px oklch(0.2 0.02 80 / 6%);
+    --shadow-up:0 -12px 28px -22px oklch(0.2 0.02 80 / 40%);
+
+    --success:oklch(0.52 0.09 150);
+    --success-soft:color-mix(in oklab, oklch(0.52 0.09 150) 10%, transparent);
+    --danger:oklch(0.53 0.13 27);
+    --danger-soft:color-mix(in oklab, oklch(0.53 0.13 27) 8%, transparent);
+    --warning:oklch(0.55 0.1 72);
+    --warning-soft:color-mix(in oklab, oklch(0.55 0.1 72) 10%, transparent);
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--stage)}
+  body{font-family:var(--font);color:var(--fg);font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased}
+  .page{max-width:1424px;margin:0 auto;padding:56px 32px 104px}
+
+  .doc-head{display:grid;grid-template-columns:76px minmax(0,1fr);gap:24px;padding-bottom:26px;border-bottom:1px solid var(--border-strong)}
+  .doc-no{font-family:var(--mono);font-size:12px;color:var(--muted-fg);padding-top:6px;letter-spacing:.02em}
+  h1{margin:0 0 8px;font-size:27px;font-weight:500;line-height:1.28;letter-spacing:-.01em}
+  .lede{margin:0;max-width:860px;font-size:13.5px;color:var(--muted-fg)}
+  .decision{display:flex;gap:8px;margin:16px 0 0;padding:8px 12px;border-left:2px solid var(--warning);
+            background:var(--warning-soft);font-size:12.5px;max-width:880px}
+  .decision b{font-weight:500}
+
+  .nav{display:flex;gap:4px;margin-top:18px;flex-wrap:wrap}
+  .nav a{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 10px;border:1px solid var(--border);
+         border-radius:6px;font-size:11.5px;color:var(--muted-fg);text-decoration:none;background:#fff}
+  .nav a.on{border-color:var(--border-strong);background:var(--brand-9);color:var(--brand-ink)}
+  .nav a span{font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-3)}
+
+  section{margin-top:64px}
+  .sec-hd{display:flex;align-items:baseline;gap:10px;margin-bottom:6px}
+  .sec-no{font-family:var(--mono);font-size:11px;color:var(--brand)}
+  h2{margin:0;font-size:18px;font-weight:500;letter-spacing:-.005em}
+  .sec-note{margin:0 0 22px;max-width:860px;font-size:13px;color:var(--muted-fg)}
+  h3{margin:34px 0 12px;font-size:13.5px;font-weight:500}
+  p{margin:0 0 12px;font-size:13px;color:var(--muted-fg);max-width:860px}
+  code{font-family:var(--mono);font-size:11px;color:var(--fg);background:var(--muted);border-radius:3px;padding:1px 4px}
+  kbd{display:inline-flex;align-items:center;justify-content:center;height:16px;min-width:16px;padding:0 4px;
+      border:1px solid var(--border);border-radius:3px;font-family:var(--mono);font-size:9.5px;line-height:1;color:var(--muted-fg-2)}
+  .i{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+  .i12{width:12px;height:12px}.i14{width:14px;height:14px}
+  .figure{position:relative;width:max-content;max-width:100%}
+  .cap{margin:12px 0 0;font-size:11.5px;color:var(--muted-fg-2);max-width:1080px}
+  .cap b{font-weight:500;color:var(--fg)}
+
+  /* 窗口 */
+  .win{position:relative;width:1296px;display:flex;flex-direction:column;background:var(--bg);
+       border:1px solid var(--border);border-radius:10px;overflow:hidden;box-shadow:var(--shadow-win)}
+  .bar{position:relative;flex:none;display:flex;align-items:center;height:36px;padding-left:16px;
+       background:var(--chrome);box-shadow:inset 0 -1px 0 var(--chrome-border)}
+  .brand{flex:none;padding-right:12px;font-size:12.5px;font-weight:500;line-height:1;color:var(--fg)}
+  .menus{display:flex;align-items:center;flex:none}
+  .mbtn{height:26px;padding:0 12px;border-radius:6px;font-size:12px;font-weight:500;line-height:26px;color:var(--brand-ink)}
+  .field-wrap{position:absolute;left:50%;top:5px;transform:translateX(-50%);width:390px}
+  .field{display:grid;grid-template-columns:12px minmax(0,1fr) auto;align-items:center;gap:8px;height:26px;
+         padding:0 6px 0 10px;border:1px solid var(--border);border-radius:7px;background:var(--bg);color:var(--muted-fg-2)}
+  .field .prompt{font-family:var(--mono);font-size:13px;color:var(--brand);text-align:center;transform:translateY(-1px)}
+  .field .ph{font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .icons{margin-left:auto;display:flex;align-items:center;gap:2px;flex:none}
+  .icon-btn{display:grid;place-items:center;width:28px;height:28px;border-radius:6px;color:var(--brand-ink)}
+  .icon-btn.on{background:var(--brand-12)}
+  .wctl{display:flex;margin-left:10px}
+  .wbtn{display:grid;place-items:center;width:46px;height:36px;color:var(--muted-fg);font-size:12px}
+  .tabstrip{flex:none;display:flex;align-items:center;gap:4px;height:34px;padding:0 10px;border-bottom:1px solid var(--border-soft)}
+  .tab{display:flex;align-items:center;gap:7px;height:26px;padding:0 8px 0 10px;border-radius:6px;font-size:11.5px;color:var(--muted-fg)}
+  .tab.on{background:var(--muted);color:var(--fg);font-weight:500}
+  .tab .badge{font-size:9px;color:var(--brand);background:var(--brand-9);border-radius:3px;padding:0 4px;line-height:14px}
+  .tab .x{color:var(--muted-fg-3)}
+
+  .body{display:flex;flex:none;height:620px}
+  .canvas{position:relative;flex:1;min-width:0;overflow:hidden;background-color:var(--bg);
+          background-image:radial-gradient(var(--canvas-dot) 1px,transparent 1px);background-size:22px 22px}
+  .edges{position:absolute;inset:0;width:100%;height:100%}
+  .edges path{fill:none;stroke:var(--canvas-line);stroke-width:1.25}
+  .inputnode{position:absolute;width:330px;background:var(--paper);border:1px solid var(--border);border-radius:8px;
+             box-shadow:var(--shadow-card);overflow:hidden}
+  .inputnode .ih{display:flex;align-items:center;gap:8px;height:28px;padding:0 10px;border-bottom:1px solid var(--border-soft);
+                 font-family:var(--mono);font-size:10px;color:var(--fg)}
+  .inputnode .ih .m{margin-left:auto;font-family:var(--font);font-size:9px;color:var(--muted-fg-2)}
+  .inputnode table{width:100%;border-collapse:collapse;table-layout:fixed}
+  .inputnode th{height:21px;padding:0 8px;text-align:left;font-size:9px;font-weight:500;color:var(--muted-fg);border-bottom:1px solid var(--border-soft)}
+  .inputnode td{height:20px;padding:0 8px;font-size:9px;color:var(--ink-88);border-bottom:1px solid color-mix(in oklab,var(--border) 55%,transparent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .inputnode td.num{font-family:var(--mono);text-align:right;font-variant-numeric:tabular-nums}
+  .inputnode .if{display:flex;align-items:center;height:22px;padding:0 10px;border-top:1px solid var(--border-soft);font-family:var(--mono);font-size:8.5px;color:var(--muted-fg-2)}
+  .snode{position:absolute;width:196px;background:var(--card);border:1px solid var(--border);border-radius:8px;box-shadow:var(--shadow-card);overflow:hidden}
+  .snode .sh{display:flex;align-items:center;gap:7px;padding:8px 10px 6px}
+  .snode .idx{font-family:var(--mono);font-size:8.5px;color:var(--muted-fg-2)}
+  .snode .nm{font-size:11.5px;font-weight:500;line-height:1.2;color:var(--fg)}
+  .snode .tag{margin-left:auto;font-family:var(--mono);font-size:8.5px;color:var(--muted-fg-2);border:1px solid var(--border-soft);border-radius:3px;padding:0 3px;line-height:13px}
+  .snode .sb{padding:0 10px 8px;display:flex;flex-wrap:wrap;gap:4px}
+  .snode .p{font-family:var(--mono);font-size:8.5px;line-height:14px;color:var(--muted-fg);background:var(--muted);border:1px solid var(--border-soft);border-radius:3px;padding:0 4px}
+  .snode.done .idx{color:var(--brand-ink)}
+  .snode.running{border-color:color-mix(in oklab,var(--brand) 45%,transparent)}
+  .snode.running::before{content:"";position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--brand)}
+  .snode.running .idx{color:#fff;background:var(--brand);border-radius:3px;padding:0 3px}
+
+  /* 作业台 */
+  .dock{flex:none;width:360px;border-left:1px solid var(--border-strong);background:#fff;display:flex;flex-direction:column}
+  .dock-h{flex:none;display:flex;align-items:center;gap:8px;height:34px;padding:0 10px 0 14px;border-bottom:1px solid var(--border-soft)}
+  .dock-h .t{font-size:12px;font-weight:500}
+  .dock-h .c{font-family:var(--mono);font-size:10px;color:var(--muted-fg-2)}
+  .dock-h .sp{flex:1}
+  .dock-h .ic{display:grid;place-items:center;width:22px;height:22px;border-radius:4px;color:var(--muted-fg-2)}
+  .dock-h .ic.on{background:var(--ink-4);color:var(--fg)}
+  .sum{flex:none;display:flex;align-items:center;gap:10px;height:30px;padding:0 14px;border-bottom:1px solid var(--border-soft);
+       font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-2);font-variant-numeric:tabular-nums}
+  .sum .g{display:flex;align-items:center;gap:4px}
+  .sum .lamp{width:5px;height:5px;border-radius:50%}
+  .sum .sp{flex:1}
+  .sum .cap{font-family:var(--font);font-size:9.5px;color:var(--muted-fg-3);margin:0}
+  .scroll{flex:1;min-height:0;overflow-y:auto;scrollbar-width:thin}
+  .gh{display:flex;align-items:center;gap:6px;height:26px;padding:0 14px;font-family:var(--mono);font-size:9px;color:var(--muted-fg-3)}
+  .gh b{font-weight:400;color:var(--muted-fg-2)}
+  .job{padding:8px 14px 9px;border-bottom:1px solid var(--border-soft)}
+  .job.live{background:color-mix(in oklab,var(--brand) 2.5%,#fff)}
+  .job .r1{display:flex;align-items:center;gap:7px}
+  .job .lamp{width:6px;height:6px;border-radius:50%;flex:none}
+  .job .lamp.run{background:var(--brand);box-shadow:0 0 0 3px var(--brand-9)}
+  .job .lamp.ok{background:var(--success)}
+  .job .lamp.err{background:var(--danger)}
+  .job .lamp.wait{border:1px solid var(--border-strong)}
+  .job .nm{font-size:11.5px;font-weight:500;color:var(--fg);min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .job .nm i{font-style:normal;font-weight:400;color:var(--muted-fg-2)}
+  .job .tm{margin-left:auto;font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-2);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .job .r2{display:flex;align-items:center;gap:6px;margin-top:4px;padding-left:13px}
+  .job .chain{font-family:var(--mono);font-size:9px;color:var(--muted-fg-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .job .out{margin-left:auto;font-family:var(--mono);font-size:8.5px;color:var(--muted-fg-3);white-space:nowrap}
+  .job .act{margin-top:6px;padding-left:13px;display:flex;gap:10px;font-size:10px;color:var(--brand-ink)}
+  .job .act .m{color:var(--muted-fg-3)}
+  .job .act .d{color:var(--danger)}
+  .job .err{margin-top:5px;padding-left:13px;font-family:var(--mono);font-size:8.5px;line-height:1.45;color:var(--danger);overflow-wrap:anywhere}
+  .job .detail{margin:7px 0 0 13px;border-left:1px solid var(--border-soft);padding-left:10px}
+  .job .detail .dl{display:flex;align-items:center;gap:6px;height:20px;font-family:var(--mono);font-size:8.5px;color:var(--muted-fg-2)}
+  .job .detail .dl b{font-weight:400;color:var(--fg)}
+  .job .detail .dl .v{color:var(--success)}
+
+  /* 层级图 */
+  .layers{display:flex;align-items:stretch;gap:0;max-width:1296px;border:1px solid var(--border);border-radius:9px;background:#fff;overflow:hidden;box-shadow:var(--shadow-card)}
+  .layer{flex:1;padding:16px 18px;border-right:1px solid var(--border-soft);position:relative}
+  .layer:last-child{border-right:0}
+  .layer .ln{font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-3)}
+  .layer h4{margin:3px 0 5px;font-size:12.5px;font-weight:500}
+  .layer p{margin:0;font-size:11px;line-height:1.55;color:var(--muted-fg)}
+  .layer.warn{background:var(--warning-soft)}
+  .layer.warn .ln{color:var(--warning)}
+  .layer.warn h4{color:var(--warning)}
+  .arrow-sep{display:flex;align-items:center;justify-content:center;width:22px;flex:none;color:var(--muted-fg-3);font-family:var(--mono);font-size:12px;background:#fff;border-right:1px solid var(--border-soft)}
+
+  /* 建议 */
+  .advice{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;max-width:1296px}
+  .adv{border:1px solid var(--border);border-radius:9px;background:#fff;padding:16px;box-shadow:var(--shadow-card)}
+  .adv .an{font-family:var(--mono);font-size:9.5px;color:var(--brand)}
+  .adv h4{margin:3px 0 6px;font-size:12.5px;font-weight:500}
+  .adv p{font-size:11.5px;line-height:1.6;margin:0;color:var(--muted-fg)}
+  .adv code{font-size:9.5px}
+
+  table.final{width:100%;max-width:1296px;border-collapse:collapse;background:#fff;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+  table.final th{height:34px;padding:0 12px;text-align:left;font-size:11px;font-weight:500;color:var(--muted-fg);
+                 border-bottom:1px solid var(--border-strong);background:color-mix(in oklab,var(--muted) 55%,#fff);white-space:nowrap}
+  table.final td{height:33px;padding:0 12px;font-size:12px;color:var(--ink-88);border-bottom:1px solid var(--border-soft)}
+  table.final tr:last-child td{border-bottom:0}
+  table.final td:first-child{width:200px;color:var(--fg)}
+  table.final .yes{color:var(--success)}
+  table.final .no{color:var(--muted-fg-3)}
+  table.final .mid{color:var(--warning)}
+  table.final tr.pick td{background:var(--brand-6)}
+  table.final tr.pick td:first-child{font-weight:500}
+
+  .verdict{display:flex;gap:10px;margin-top:20px;padding:14px 16px;border:1px solid var(--border);border-left:2px solid var(--brand);
+           border-radius:0 8px 8px 0;background:#fff;max-width:1296px;box-shadow:var(--shadow-card)}
+  .verdict .vn{font-family:var(--mono);font-size:10px;color:var(--brand);padding-top:1px}
+  .verdict b{font-weight:500}
+  .verdict p{margin:2px 0 0;font-size:12px;line-height:1.65}
+
+  .foot{margin-top:72px;padding-top:18px;border-top:1px solid var(--border);font-size:11px;color:var(--muted-fg-3);display:flex;justify-content:space-between}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="doc-head">
+    <div class="doc-no">086 / 04</div>
+    <div>
+      <h1>方案 C：管道作业台</h1>
+      <p class="lede">把「运行」从标签页的附属状态提升为一等对象：每条分支是一份作业，一个面板管理所有正在跑、排队和刚完成的管道，跨标签页。</p>
+      <div class="decision"><b>先给结论</b>：C 单独做会多出第四层概念（标签页 → 运行 → 分支 → 作业），执行菜单与作业台的口径还会打架。建议只吸收它的「跨标签页清单」，不引入 job 对象。</div>
+      <nav class="nav">
+        <a href="01-audit.html">现状审计 <span>01</span></a>
+        <a href="02-option-a-run-list.html">方案 A 运行清单 <span>02</span></a>
+        <a href="03-option-b-segment-dag.html">方案 B 分段 DAG <span>03</span></a>
+        <a class="on" href="04-option-c-pipeline-jobs.html">方案 C 作业台 <span>04</span></a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- 01 作业台面板 -->
+  <section>
+    <div class="sec-hd"><span class="sec-no">01</span><h2>作业台：一份列表看住所有管道</h2></div>
+    <p class="sec-note">停靠在右侧 360px，按状态分组。作业名是「标签页 › 分支」，点开一行展开步骤链、输出和日志入口。这个形态本身是好的，问题在于它要成为第几种对象。</p>
+
+    <div class="figure">
+      <div class="win">
+        <div class="bar">
+          <div class="brand">Easy CSV</div>
+          <div class="menus">
+            <div class="mbtn">文件</div><div class="mbtn">编辑</div><div class="mbtn">查看</div>
+            <div class="mbtn" style="background:color-mix(in oklab,var(--brand) 14%,#fff)">执行</div>
+            <div class="mbtn">工具</div><div class="mbtn">帮助</div>
+          </div>
+          <div class="field-wrap"><div class="field"><span class="prompt">›</span><span class="ph">搜索命令、步骤或文件</span><kbd>Ctrl F</kbd></div></div>
+          <div class="icons">
+            <div class="icon-btn on"><svg class="i" viewBox="0 0 24 24"><path d="M4 7h16M4 12h10M4 17h7"/></svg></div>
+            <div class="icon-btn on"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg></div>
+          </div>
+          <div class="wctl"><div class="wbtn">—</div><div class="wbtn">□</div><div class="wbtn">×</div></div>
+        </div>
+
+        <div class="tabstrip">
+          <div class="tab on">销售清洗 <span class="badge">运行中</span><span class="x">×</span></div>
+          <div class="tab">订单聚合 <span class="badge">排队</span><span class="x">×</span></div>
+          <div class="tab">库存核对 <span class="x">×</span></div>
+          <div class="tab" style="color:var(--muted-fg-3)">＋</div>
+        </div>
+
+        <div class="body">
+          <div class="canvas">
+            <svg class="edges" viewBox="0 0 936 540" preserveAspectRatio="none">
+              <path d="M346 286 C 370 286 380 262 410 262"/>
+              <path d="M606 262 C 640 262 650 194 680 194"/>
+              <path d="M606 262 C 640 262 650 334 680 334"/>
+            </svg>
+
+            <div class="inputnode" style="left:16px;top:210px">
+              <div class="ih"><svg class="i i12" viewBox="0 0 24 24"><path d="M4 4h16v16H4z"/><path d="M4 9h16M9 9v11"/></svg>sales_2026.csv<span class="m">4 行 × 4 列</span></div>
+              <table>
+                <colgroup><col style="width:30%"><col style="width:24%"><col style="width:20%"><col style="width:26%"></colgroup>
+                <tr><th>日期</th><th>地区</th><th>品类</th><th style="text-align:right">金额</th></tr>
+                <tr><td>2026-01-04</td><td>华东</td><td>办公</td><td class="num">12,480</td></tr>
+                <tr><td>2026-01-04</td><td>华南</td><td>耗材</td><td class="num">3,260</td></tr>
+                <tr><td>2026-01-05</td><td>华东</td><td>办公</td><td class="num">8,940</td></tr>
+                <tr><td>2026-01-05</td><td>华北</td><td>设备</td><td class="num">21,700</td></tr>
+              </table>
+              <div class="if">sales_2026.csv · 4 行 × 4 列</div>
+            </div>
+
+            <div class="snode done" style="left:410px;top:232px">
+              <div class="sh"><span class="idx">01</span><span class="nm">filter</span><span class="tag">已完成</span></div>
+              <div class="sb"><span class="p">region = 华东</span></div>
+            </div>
+            <div class="snode running" style="left:680px;top:162px">
+              <div class="sh"><span class="idx">02</span><span class="nm">groupby</span><span class="tag">运行中</span></div>
+              <div class="sb"><span class="p">by=品类</span><span class="p">sum(金额)</span></div>
+            </div>
+            <div class="snode" style="left:680px;top:302px;opacity:.72">
+              <div class="sh"><span class="idx">03</span><span class="nm">sort</span><span class="tag">未开始</span></div>
+              <div class="sb"><span class="p">-k 金额</span></div>
+            </div>
+
+            <div style="position:absolute;left:16px;top:14px;font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-3)">
+              销售清洗 · 分支 02 · 0:12
+            </div>
+          </div>
+
+          <div class="dock">
+            <div class="dock-h">
+              <span class="t">运行</span><span class="c">5</span>
+              <span class="sp"></span>
+              <span class="ic on"><svg class="i" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg></span>
+              <span class="ic"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
+            </div>
+            <div class="sum">
+              <span class="g"><span class="lamp" style="background:var(--brand)"></span>2 运行中</span>
+              <span class="g"><span class="lamp" style="border:1px solid var(--border-strong)"></span>1 排队</span>
+              <span class="sp"></span>
+              <span class="cap">并发 2 / 4</span>
+            </div>
+
+            <div class="scroll">
+              <div class="gh">运行中 <b>2</b></div>
+
+              <div class="job live">
+                <div class="r1">
+                  <span class="lamp run"></span>
+                  <span class="nm">销售清洗 <i>› 分支 02</i></span>
+                  <span class="tm">0:12</span>
+                </div>
+                <div class="r2"><span class="chain">filter › groupby</span><span class="out">out/华东.csv</span></div>
+                <div class="act"><span>取消</span><span class="m">切到标签页</span></div>
+              </div>
+
+              <div class="job live">
+                <div class="r1">
+                  <span class="lamp run"></span>
+                  <span class="nm">库存核对 <i>› 分支 01</i></span>
+                  <span class="tm">1:04</span>
+                </div>
+                <div class="r2"><span class="chain">join › filter</span><span class="out">out/库存.csv</span></div>
+                <div class="act"><span>取消</span><span class="m">切到标签页</span></div>
+              </div>
+
+              <div class="gh">排队 <b>1</b></div>
+              <div class="job">
+                <div class="r1">
+                  <span class="lamp wait"></span>
+                  <span class="nm">订单聚合 <i>› 分支 01</i></span>
+                  <span class="tm">—</span>
+                </div>
+                <div class="r2"><span class="chain">groupby › sort</span><span class="out">out/订单.csv</span></div>
+                <div class="act"><span class="m">取消排队</span></div>
+              </div>
+
+              <div class="gh">最近 <b>2</b></div>
+              <div class="job">
+                <div class="r1">
+                  <span class="lamp ok"></span>
+                  <span class="nm">销售清洗 <i>› 分支 01</i></span>
+                  <span class="tm">0:08</span>
+                </div>
+                <div class="r2"><span class="chain">filter › dedup</span><span class="out">out/华东.csv</span></div>
+                <div class="act"><span>打开结果</span><span>重跑</span><span class="m">打开输出</span></div>
+              </div>
+              <div class="job">
+                <div class="r1">
+                  <span class="lamp err"></span>
+                  <span class="nm">库存核对 <i>› 分支 02</i></span>
+                  <span class="tm">0:03</span>
+                </div>
+                <div class="r2"><span class="chain">join › dedup</span><span class="out">—</span></div>
+                <div class="err">join: key column "sku" not found</div>
+                <div class="act"><span>查看</span><span>重跑</span><span class="m">只看此作业日志</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="cap">作业台把跨标签页的运行收进一个列表：运行中、排队、最近三段，每行两排信息（名称与耗时 / 链与输出），动作退成文字。<b>它解决的是「切页找不到任务」</b>，与方案 A 的分支清单并不冲突，但会多出一个对象。</p>
+    </div>
+  </section>
+
+  <!-- 02 层级问题 -->
+  <section>
+    <div class="sec-hd"><span class="sec-no">02</span><h2>问题：第四层对象</h2></div>
+    <p class="sec-note">现在应用里已经有三层。C 加进来的「作业」不是任何现有层级的别名，用户需要重新理解一次。</p>
+
+    <div class="layers">
+      <div class="layer">
+        <div class="ln">L1</div>
+        <h4>标签页</h4>
+        <p>一份管道文档：输入、步骤、连线、输出路径。用户可以开很多个。</p>
+      </div>
+      <div class="arrow-sep">›</div>
+      <div class="layer">
+        <div class="ln">L2</div>
+        <h4>运行</h4>
+        <p>点一次执行产生一个 session，带 runId、队列、取消。一个标签页同时只有一个。</p>
+      </div>
+      <div class="arrow-sep">›</div>
+      <div class="layer">
+        <div class="ln">L3</div>
+        <h4>分支</h4>
+        <p>一次运行内部的路径单元，今天只出现在进度读数与结果页签里。</p>
+      </div>
+      <div class="arrow-sep">›</div>
+      <div class="layer warn">
+        <div class="ln">L4</div>
+        <h4>作业</h4>
+        <p>把 L2 × L3 展开成可单独操作的对象。与执行菜单按标签页列运行的口径不一致。</p>
+      </div>
+    </div>
+
+    <h3>三个具体冲突</h3>
+    <p style="font-size:12.5px">
+      <b>入口重复</b>：标题栏「执行」已经是按标签页的运行列表，作业台再按分支列一次，同一个任务在两处出现。<br>
+      <b>取消语义</b>：执行菜单取消的是标签页 run，作业台取消的是单个作业；用户不清楚后者会不会影响同标签页的其他分支。<br>
+      <b>没有新能力</b>：如果不做 A 的节点状态与 B 的去重，作业台只是把「分支」改名成「作业」，既没少算一次，也没让结果更好找。
+    </p>
+  </section>
+
+  <!-- 03 吸收方式 -->
+  <section>
+    <div class="sec-hd"><span class="sec-no">03</span><h2>只吸收它的三件事</h2></div>
+    <p class="sec-note">作业台里真正有价值的是「跨标签页可见」和「单任务操作」。这两点放进方案 A 的运行清单即可，不需要新对象。</p>
+
+    <div class="advice">
+      <div class="adv">
+        <div class="an">吸收 01</div>
+        <h4>跨标签页汇总</h4>
+        <p>运行清单顶部已有「另有 N 个标签页在运行」的弱提示，升级为可展开的一段：按标签页列出运行中的分支与耗时。不引入新页签。</p>
+      </div>
+      <div class="adv">
+        <div class="an">吸收 02</div>
+        <h4>行内单任务操作</h4>
+        <p>方案 A 的每一行已经给了取消、结果、重跑。<code>只看该分支日志</code> 作为行内第三个动作，复用日志面板的 <code>runId</code> 过滤。</p>
+      </div>
+      <div class="adv">
+        <div class="an">吸收 03</div>
+        <h4>输出与结果入口</h4>
+        <p>行尾给出输出路径与「打开输出」，失败行给出错误摘要。与 084 的结果抽屉共用同一份数据，不加第二套。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 04 最终对比 -->
+  <section>
+    <div class="sec-hd"><span class="sec-no">04</span><h2>三案定稿对照</h2></div>
+    <p class="sec-note">按「解决根因 / 立刻可做 / 概念负担」三个维度落一行结论。</p>
+
+    <table class="final">
+      <thead>
+        <tr><th>维度</th><th>A 运行清单</th><th>B 分段 DAG</th><th>C 管道作业台</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>公共前缀重复</td><td class="no">只暴露</td><td class="yes">消除</td><td class="no">不解决</td></tr>
+        <tr><td>分支串行</td><td class="no">不解决</td><td class="yes">段级并行</td><td class="mid">跨标签页已有</td></tr>
+        <tr><td>多入边语义</td><td class="no">不涉及</td><td class="mid">需拍板</td><td class="no">不涉及</td></tr>
+        <tr><td>输出覆盖</td><td class="mid">计划页提示</td><td class="yes">提示 + 占位符</td><td class="no">不解决</td></tr>
+        <tr><td>节点级可见</td><td class="yes">有</td><td class="yes">有</td><td class="yes">有</td></tr>
+        <tr><td>结果归属</td><td class="yes">按分支</td><td class="yes">按终端段</td><td class="yes">按作业</td></tr>
+        <tr><td>跨标签页可见</td><td class="mid">可吸收</td><td class="mid">可吸收</td><td class="yes">核心能力</td></tr>
+        <tr><td>概念负担</td><td>低</td><td>中</td><td class="no">高（第四层）</td></tr>
+        <tr><td>后端改动</td><td class="yes">无</td><td class="no">大</td><td class="yes">无</td></tr>
+        <tr class="pick"><td>建议</td><td class="yes">先落地</td><td class="mid">第二阶段</td><td class="no">不单独做，吸收清单部分</td></tr>
+      </tbody>
+    </table>
+
+    <div class="verdict">
+      <div class="vn">建议</div>
+      <div>
+        <b>P0 做方案 A；P1 做 B1（段划分 + 共享段只跑一次）；P2 再做段级并行与输出占位符。C 不进入路线图，只把「跨标签页清单」并进 A 的运行面板。</b>
+        <p>如果只允许做一件事，选 A：它不改任何执行语义，却能让用户第一次看清「这次到底跑了什么」。如果只允许做一件有技术含量的事，选 B1：它把重复计算拿掉，且结果与今天最接近。</p>
+      </div>
+    </div>
+
+    <h3>拍板前需要回答的三个问题</h3>
+    <p style="font-size:12.5px">
+      <b>1. 段级并发与标签页并发是否共享配额？</b> 现在是 <code>max_concurrent_runs = 4</code>；段级再乘 4 会瞬间拉起 16 个 xan 进程。建议共享一个池，或段级默认 2。<br>
+      <b>2. 多入边默认行为？</b> 按边序拼接会改变现有菱形图的结果语义；拒绝执行会让今天能跑的图不能跑。建议第一版拼接 + 徽标，并在计划页写清。<br>
+      <b>3. 「运行」页签出现时机？</b> 常量出现会占掉日志/结果的横向空间；建议只在有运行或有多分支计划时出现，单链管道保持今天的样子。
+    </p>
+  </section>
+
+  <div class="foot">
+    <span>Easy CSV · 设计原型 086-04</span>
+    <span>独立 HTML，仅用于评审</span>
+  </div>
+</div>
+</body>
+</html>

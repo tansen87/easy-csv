@@ -139,6 +139,8 @@ interface FlowPanelProps {
   onSave: () => void;
   onTableDelete?: () => void;
   selectedStepId?: string;
+  /** Step states of the current run, rendered on the cards (design 086). */
+  executionStates?: Record<string, import("@/types/execution").StepExecutionStatus>;
   onEdgesChange?: (edges: PipelineEdge[]) => void;
   onInputPositionChange?: (position: { x: number; y: number }) => void;
   savedEdges?: PipelineEdge[];
@@ -184,6 +186,7 @@ export function FlowPanel({
   onSave,
   onTableDelete,
   selectedStepId,
+  executionStates,
   onEdgesChange,
   onInputPositionChange,
   savedEdges,
@@ -469,6 +472,7 @@ export function FlowPanel({
     inputFormat,
     sourceTable,
     selectedStepId,
+    executionStates,
     highlightedNodeId,
     onStepClickRef,
     onStepRemoveRef,

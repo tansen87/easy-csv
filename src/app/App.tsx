@@ -77,6 +77,13 @@ import { useImportExport } from "@/hooks/fileIO/useImportExport";
 import { useExecution } from "@/hooks/execution/useExecution";
 import { useSaveIntermediate } from "@/hooks/execution/useSaveIntermediate";
 import { useRunFromStep } from "@/hooks/execution/useRunFromStep";
+import { buildRunPlan } from "@/hooks/execution/buildBranches";
+import { RunMeta, RunPanel } from "@/modules/runs/RunPanel";
+import type {
+  BranchRunState,
+  StepExecutionStatus,
+  TabBranches,
+} from "@/types/execution";
 import {
   useAppBootstrap,
   useRunCompletionNotification,
@@ -824,6 +831,37 @@ function AppContent() {
     saveExecutionHistory: executionHistory.saveEntry,
   });
 
+  /**
+   * Branch plan for every tab, consumed by the Execute menu (design 086).
+   * Pure and cheap: paths are enumerated on pipeline/edge changes, not per run.
+   */
+  const branchesByTab = useMemo(() => {
+    const map: Record<string, TabBranches> = {};
+    tabsHook.tabs.forEach((tab) => {
+      const executable = (tab.pipeline || []).filter(
+        (step) => step.command.id !== "output",
+      );
+      const outputPath = tab.pipeline?.find(
+        (step) => step.command.id === "output",
+      )?.parameters.path;
+      try {
+        const plan = buildRunPlan(executable, tab.edges || []);
+        map[tab.id] = {
+          branches: plan.branches.map((steps, index) => ({
+            index,
+            stepIds: steps.map((step) => step.id),
+            stepNames: steps.map((step) => step.alias || step.command.name),
+          })),
+          outputPath: outputPath || undefined,
+        };
+      } catch {
+        // A cycle is surfaced when the run starts; the menu stays runnable.
+        map[tab.id] = { branches: [] };
+      }
+    });
+    return map;
+  }, [tabsHook.tabs]);
+
   const {
     handleExecute,
     runTab,
@@ -873,30 +911,50 @@ function AppContent() {
     return resultPreview.length > 0 ? 0 : -1;
   }, [ui.bottomDockTab, resultPreview.length]);
 
-  const dockTabs: BottomDockTabItem[] = useMemo(
-    () => [
+  const dockTabs: BottomDockTabItem[] = useMemo(() => {
+    const run = execution.runs[tabsHook.selectedTabId];
+    const runCount = run?.branches?.length ?? 0;
+    return [
       { id: "logs", label: t.logs, count: logs.length },
-      ...resultPreview.map((result, index) => ({
-        id: `result:${index}` as BottomDockTab,
-        label:
-          resultPreview.length > 1 ? `${t.results} ${index + 1}` : t.results,
-        count: result.truncated
-          ? t.resultTruncatedRows.replace("{n}", String(result.totalRows))
-          : result.totalRows,
-        // A run finished while the logs were being read: dot the first result
-        // instead of switching the panel under the user's eyes.
-        unseen: index === 0 && ui.resultsUnseen,
-      })),
-    ],
-    [
-      logs.length,
-      resultPreview,
-      t.logs,
-      t.results,
-      t.resultTruncatedRows,
-      ui.resultsUnseen,
-    ],
-  );
+      ...(runCount > 0
+        ? [{ id: "runs" as BottomDockTab, label: t.runPanel, count: runCount }]
+        : []),
+      ...resultPreview.map((result, index) => {
+        const branchNumber = String(
+          (result.branchIndex ?? index) + 1,
+        ).padStart(2, "0");
+        return {
+          id: `result:${index}` as BottomDockTab,
+          label:
+            result.branchIndex !== undefined
+              ? t.resultBranchLabel.replace("{index}", branchNumber)
+              : resultPreview.length > 1
+                ? `${t.results} ${index + 1}`
+                : t.results,
+          count: result.error
+            ? t.runStateFailed
+            : result.truncated
+              ? t.resultTruncatedRows.replace("{n}", String(result.totalRows))
+              : result.totalRows,
+          // A run finished while the logs were being read: dot the first result
+          // instead of switching the panel under the user's eyes.
+          unseen: index === 0 && ui.resultsUnseen,
+        };
+      }),
+    ];
+  }, [
+    execution.runs,
+    logs.length,
+    resultPreview,
+    tabsHook.selectedTabId,
+    t.logs,
+    t.resultBranchLabel,
+    t.resultTruncatedRows,
+    t.results,
+    t.runPanel,
+    t.runStateFailed,
+    ui.resultsUnseen,
+  ]);
 
   // ── Per-tab execution state (design 028 §5) ───────────────────────────────
   // The toolbar button, progress pill and cancel all follow the *current* tab;
@@ -908,6 +966,51 @@ function AppContent() {
       run.tabId !== tabsHook.selectedTabId &&
       (run.state === "running" || run.state === "preparing"),
   ).length;
+
+  const runBranches: BranchRunState[] = useMemo(
+    () => currentRun?.branches ?? [],
+    [currentRun?.branches],
+  );
+  const hasRunPanel = runBranches.length > 0;
+  const dockRunsActive = ui.bottomDockTab === "runs" && hasRunPanel;
+
+  // An already-open dock follows the new run; a closed dock stays closed
+  // (design 071's rule), so the run panel never steals screen space by itself.
+  useEffect(() => {
+    if (currentRun?.state === "running" && ui.showLogPanel) {
+      setBottomDockTab("runs");
+    }
+  }, [
+    currentRun?.runId,
+    currentRun?.state,
+    setBottomDockTab,
+    ui.showLogPanel,
+  ]);
+
+  /**
+   * Step state projected onto the canvas. A shared step can appear in several
+   * selected branches; the most active/severe state wins (running > error >
+   * pending > done > skipped).
+   */
+  const executionStates = useMemo(() => {
+    const rank: Record<StepExecutionStatus, number> = {
+      skipped: 0,
+      pending: 1,
+      done: 2,
+      error: 3,
+      running: 4,
+    };
+    const map: Record<string, StepExecutionStatus> = {};
+    runBranches.forEach((branch) => {
+      branch.steps.forEach((step) => {
+        const previous = map[step.id];
+        if (!previous || rank[step.status] > rank[previous]) {
+          map[step.id] = step.status;
+        }
+      });
+    });
+    return map;
+  }, [runBranches]);
 
   useRunCompletionNotification(
     execution.runs,
@@ -926,8 +1029,8 @@ function AppContent() {
 
   /** Execute menu: click a row → switch to that tab, run it, mark pipeline saved. */
   const handleRunTab = useCallback(
-    (tabId: string) => {
-      void execution.runTab(tabId);
+    (tabId: string, selectedBranchIndexes?: number[]) => {
+      void execution.runTab(tabId, selectedBranchIndexes);
       markPipelineSaved();
     },
     [execution.runTab, markPipelineSaved],
@@ -1785,6 +1888,7 @@ function AppContent() {
                   currentTabId={tabsHook.selectedTabId}
                   onSelectTab={tabsHook.setSelectedTabId}
                   onRunTab={handleRunTab}
+                  branchesByTab={branchesByTab}
                   onCancelTab={handleCancelTab}
                   onOpenFile={handleOpenFile}
                   onOpenNewTabWithFile={handleOpenNewTabWithFile}
@@ -1910,6 +2014,7 @@ function AppContent() {
                     onImportPipeline={handleImportPipeline}
                     onOpenUrl={handleOpenUrl}
                     branchProgress={currentRun?.branch ?? null}
+                    executionStates={executionStates}
                     showProgressBar={!!currentRun?.showProgress}
                     otherRunningCount={otherRunningCount}
                     tabRuns={execution.runs}
@@ -2001,31 +2106,83 @@ function AppContent() {
             <BottomDock
               open={ui.showLogPanel}
               activeTab={
-                dockResultIndex >= 0 ? `result:${dockResultIndex}` : "logs"
+                dockRunsActive
+                  ? "runs"
+                  : dockResultIndex >= 0
+                    ? `result:${dockResultIndex}`
+                    : "logs"
               }
               onTabChange={(tab) => {
-              setBottomDockTab(tab);
-              if (tab.startsWith("result")) setResultsUnseen(false);
-            }}
+                setBottomDockTab(tab);
+                if (tab.startsWith("result")) setResultsUnseen(false);
+              }}
               onClose={() => ui.setShowLogPanel(false)}
               tabs={dockTabs}
               preferredHeight={
-                dockResultIndex >= 0
-                  ? resultPanelHeight(
-                      resultPreview[dockResultIndex].rows.length,
-                    )
-                  : undefined
+                dockRunsActive
+                  ? Math.min(460, 90 + runBranches.length * 34)
+                  : dockResultIndex >= 0
+                    ? resultPanelHeight(
+                        resultPreview[dockResultIndex].rows.length,
+                      )
+                    : undefined
               }
               meta={
-                dockResultIndex >= 0 ? (
-                  <ResultMeta
-                    result={resultPreview[dockResultIndex]}
-                    index={dockResultIndex}
-                  />
+                dockRunsActive ? (
+                  <RunMeta branches={runBranches} />
+                ) : dockResultIndex >= 0 ? (
+                  <>
+                    <ResultMeta
+                      result={resultPreview[dockResultIndex]}
+                      index={dockResultIndex}
+                    />
+                    {currentRun?.unselectedBranchCount ? (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleRunTab(
+                            tabsHook.selectedTabId,
+                            currentRun.unselectedBranchIndexes ?? [],
+                          )
+                        }
+                        className="shrink-0 text-[10px] font-medium text-primary transition-colors hover:text-primary/75"
+                      >
+                        {t.runRemaining}
+                      </button>
+                    ) : null}
+                  </>
                 ) : null
               }
               panel={
-                dockResultIndex >= 0 ? (
+                dockRunsActive ? (
+                  <RunPanel
+                    branches={runBranches}
+                    unselectedCount={currentRun?.unselectedBranchCount ?? 0}
+                    unselectedIndexes={currentRun?.unselectedBranchIndexes ?? []}
+                    hasResult={(branchIndex) =>
+                      resultPreview.some(
+                        (result) => result.branchIndex === branchIndex,
+                      )
+                    }
+                    onOpenResult={(branchIndex) => {
+                      const index = resultPreview.findIndex(
+                        (result) => result.branchIndex === branchIndex,
+                      );
+                      if (index < 0) return;
+                      setBottomDockTab(`result:${index}`);
+                      setResultsUnseen(false);
+                    }}
+                    onRerun={(branchIndex) =>
+                      handleRunTab(tabsHook.selectedTabId, [branchIndex])
+                    }
+                    onRunRemaining={(indexes) =>
+                      handleRunTab(tabsHook.selectedTabId, indexes)
+                    }
+                    onCancelRun={() =>
+                      void execution.cancelRun(tabsHook.selectedTabId)
+                    }
+                  />
+                ) : dockResultIndex >= 0 ? (
                   <ResultsPanel result={resultPreview[dockResultIndex]} />
                 ) : null
               }
@@ -2037,7 +2194,7 @@ function AppContent() {
             >
               <LogPanel
                 embedded
-                embeddedActive={dockResultIndex < 0}
+                embeddedActive={!dockRunsActive && dockResultIndex < 0}
                 logs={logs}
                 onClear={clearLogs}
                 onRemoveLog={removeLog}

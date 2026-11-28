@@ -14,8 +14,11 @@ import { Button } from "@/components/ui/Button";
 import type { PanelDockState } from "@/types/xan";
 import { DockHeaderSlotContext } from "@/components/layout/dockSlots";
 
-/** `logs` is always the first tab; results follow, one per successful branch. */
-export type BottomDockTab = "logs" | `result:${number}`;
+/**
+ * `logs` is always the first tab; `runs` follows while a run is live, then one
+ * result tab per branch (design 086).
+ */
+export type BottomDockTab = "logs" | "runs" | `result:${number}`;
 
 interface BottomDockProps {
   open: boolean;

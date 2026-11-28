@@ -1,12 +1,11 @@
 import type {
   ExecutionHistoryInput,
   ExecutionHistoryStatus,
-  PipelineStep,
 } from "@/types/xan";
 import { invoke } from "@tauri-apps/api/core";
 import type { PendingRun, ResultPreview, RunContext } from "@/types/execution";
 import type { RunPipelineDeps } from "@/hooks/execution/runPipelineDeps";
-import { buildExecutionBranches } from "@/hooks/execution/buildBranches";
+import { buildRunPlan } from "@/hooks/execution/buildBranches";
 import { executeSingleBranch } from "@/hooks/execution/executeBranch";
 import { parseCsvString } from "@/utils/csv";
 import { stripStepCommand } from "@/utils/session";
@@ -46,9 +45,9 @@ export async function runPipeline(
   //    error (and mark the involved nodes red) instead of a stack overflow.
   //  - Multiple branches writing one output file need an explicit
   //    overwrite confirmation.
-  let branches: PipelineStep[][] = [];
+  let plan: ReturnType<typeof buildRunPlan>;
   try {
-    branches = buildExecutionBranches(steps, edges);
+    plan = buildRunPlan(steps, edges, pending.selectedBranchIndexes);
   } catch (error) {
     const cycleErr = error as Error & { cycleNodeIds?: string[] };
     const chain = cycleErr.message.replace(/^cycle: /, "");
@@ -72,12 +71,31 @@ export async function runPipeline(
     return;
   }
 
-  if (branches.length > 1 && outputPath && !opts?.force) {
+  const branches = plan.branches;
+  const selectedBranches = plan.selectedIndexes.map((index) => ({
+    index,
+    steps: branches[index],
+  }));
+  // The picker already showed the overwrite risk; only callers that bypass it
+  // (Ctrl+R / command palette) still need the blocking confirmation.
+  if (selectedBranches.length === 0) {
+    ctx.log("warning", "No branches selected");
+    deps.finishRun(ctx.runId, "cancelled");
+    return;
+  }
+
+  const selectionProvided = pending.selectedBranchIndexes !== undefined;
+  if (
+    !selectionProvided &&
+    selectedBranches.length > 1 &&
+    outputPath &&
+    !opts?.force
+  ) {
     // Parked until the user answers: give the slot back meanwhile.
     deps.releaseRun(ctx.runId);
     deps.stashPendingRunValues(ctx.runId, resolveValues);
     deps.requestOverwritePrompt(ctx.runId, {
-      branchCount: branches.length,
+      branchCount: selectedBranches.length,
       outputPath,
     });
     // Stays "preparing": the confirmed re-run resumes this same session.
@@ -89,6 +107,19 @@ export async function runPipeline(
     state: "running",
     showProgress: true,
     executingStartedAt: runStartedAt,
+    branches: selectedBranches.map(({ index, steps: branchSteps }) => ({
+      index,
+      steps: branchSteps.map((step) => ({
+        id: step.id,
+        name: step.alias || step.command.name,
+        status: "pending" as const,
+      })),
+      status: "pending" as const,
+    })),
+    unselectedBranchCount: branches.length - selectedBranches.length,
+    unselectedBranchIndexes: branches
+      .map((_, index) => index)
+      .filter((index) => !plan.selectedIndexes.includes(index)),
   });
   // 071 feedback: the dock no longer opens by itself — the completion toast's
   // 「查看日志」 action owns that now. The 「打开日志面板」 setting
@@ -108,6 +139,8 @@ export async function runPipeline(
     output?: string;
     error?: string;
     branchSteps: string[];
+    branchIndex: number;
+    durationMs?: number;
   }[] = [];
 
   try {
@@ -124,15 +157,16 @@ export async function runPipeline(
     // Accumulate per-step execution errors to display on the nodes
     const accumulatedErrors: Record<string, string> = {};
 
-    for (let i = 0; i < branches.length; i++) {
-      const branchSteps = branches[i];
-      if (branchSteps.length === 0) continue;
+    for (let order = 0; order < selectedBranches.length; order++) {
+      const { index, steps: branchSteps } = selectedBranches[order];
+      if (!branchSteps || branchSteps.length === 0) continue;
 
       const result = await executeSingleBranch({
         ctx,
         branchSteps,
-        index: i,
-        total: branches.length,
+        index,
+        order,
+        total: selectedBranches.length,
         outputPath,
         currentTab,
         deps,
@@ -145,6 +179,7 @@ export async function runPipeline(
         ctx.log("warning", "Execution cancelled by user");
         pipelineFailed = true;
         wasCancelled = true;
+        deps.skipPendingBranches?.(ctx.runId);
         break;
       }
 
@@ -153,6 +188,8 @@ export async function runPipeline(
         output: result.output,
         error: result.error,
         branchSteps: result.branchStepNames,
+        branchIndex: index,
+        durationMs: result.durationMs,
       });
 
       // Merge per-step errors from this branch
@@ -172,23 +209,40 @@ export async function runPipeline(
     // Build canvas result previews from successful branch outputs
     const runTs = Date.now();
     const previews: ResultPreview[] = [];
-    allResults.forEach((r, i) => {
+    allResults.forEach((r) => {
       if (r.success && r.output?.trim()) {
         const parsed = parseCsvString(r.output, 500);
         if (parsed.headers.length > 0) {
           previews.push({
-            id: `result-${runTs}-${i}`,
+            id: `result-${runTs}-${r.branchIndex}`,
             label:
               r.branchSteps.length > 0
                 ? `Result: ${r.branchSteps.join(" → ")}`
-                : `Branch ${i + 1}`,
+                : `Branch ${r.branchIndex + 1}`,
             steps: r.branchSteps,
             headers: parsed.headers,
             rows: parsed.rows,
             totalRows: parsed.rows.length,
             truncated: parsed.truncated,
+            branchIndex: r.branchIndex,
+            durationMs: r.durationMs,
           });
         }
+      } else if (!r.success && r.error) {
+        // A failed branch keeps a tab so its error is not silently dropped
+        // (design 086 A4).
+        previews.push({
+          id: `result-${runTs}-${r.branchIndex}`,
+          label: `Branch ${r.branchIndex + 1}`,
+          steps: r.branchSteps,
+          headers: [],
+          rows: [],
+          totalRows: 0,
+          truncated: false,
+          branchIndex: r.branchIndex,
+          durationMs: r.durationMs,
+          error: r.error,
+        });
       }
     });
     deps.setTabResultPreview(ctx.tabId, previews);
@@ -216,7 +270,7 @@ export async function runPipeline(
     }
 
     const successCount = allResults.filter((r) => r.success).length;
-    if (successCount === branches.length) {
+    if (successCount === selectedBranches.length) {
       // Completion feedback: no row counts here (071) — the execution
       // history owns the numbers, the log owns the timeline.
       const completedAt = new Date().toTimeString().slice(0, 8);

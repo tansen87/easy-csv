@@ -1,0 +1,735 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>原型 086-05 · 方案 A · 执行菜单内的分支选择</title>
+<style>
+  :root{
+    --font:"Inter","Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Consolas,monospace;
+
+    --bg:#fff;
+    --fg:oklch(0.145 0 0);
+    --ink-88:color-mix(in oklab, oklch(0.145 0 0) 88%, #fff);
+    --ink-4:color-mix(in oklab, oklch(0.145 0 0) 4%, transparent);
+    --muted:oklch(0.97 0 0);
+    --muted-fg:oklch(0.556 0 0);
+    --muted-fg-2:oklch(0.66 0 0);
+    --muted-fg-3:oklch(0.76 0 0);
+    --border:oklch(0.922 0 0);
+    --border-soft:oklch(0.2 0.01 80 / 8%);
+    --border-strong:oklch(0.2 0.01 80 / 22%);
+
+    --brand:oklch(0.42 0.055 250);
+    --brand-ink:oklch(0.35 0.05 250);
+    --brand-6:color-mix(in oklab, oklch(0.42 0.055 250) 6%, transparent);
+    --brand-9:color-mix(in oklab, oklch(0.42 0.055 250) 9%, transparent);
+    --brand-12:color-mix(in oklab, oklch(0.42 0.055 250) 12%, transparent);
+    --focus:color-mix(in oklab, oklch(0.42 0.055 250) 40%, transparent);
+    --chrome:color-mix(in oklab, oklch(0.42 0.055 250) 12%, #fff);
+    --chrome-border:color-mix(in oklab, oklch(0.42 0.055 250) 30%, transparent);
+
+    --stage:oklch(0.975 0.004 85);
+    --paper:oklch(0.995 0.004 85);
+    --canvas-dot:oklch(0.2 0.01 80 / 11%);
+    --canvas-line:oklch(0.2 0.01 80 / 30%);
+    --shadow-card:0 1px 2px oklch(0.2 0.02 80 / 5%);
+    --shadow-win:0 24px 64px -34px oklch(0.2 0.02 80 / 34%),0 2px 6px oklch(0.2 0.02 80 / 6%);
+    --shadow-menu:0 18px 44px -22px oklch(0.2 0.02 80 / 34%),0 2px 8px oklch(0.2 0.02 80 / 6%);
+
+    --success:oklch(0.52 0.09 150);
+    --danger:oklch(0.53 0.13 27);
+    --danger-soft:color-mix(in oklab, oklch(0.53 0.13 27) 8%, transparent);
+    --warning:oklch(0.55 0.1 72);
+    --warning-soft:color-mix(in oklab, oklch(0.55 0.1 72) 10%, transparent);
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--stage)}
+  body{font-family:var(--font);color:var(--fg);font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased}
+  .page{max-width:1360px;margin:0 auto;padding:56px 32px 104px}
+
+  .doc-head{display:grid;grid-template-columns:76px minmax(0,1fr);gap:24px;padding-bottom:26px;border-bottom:1px solid var(--border-strong)}
+  .doc-no{font-family:var(--mono);font-size:12px;color:var(--muted-fg);padding-top:6px;letter-spacing:.02em}
+  h1{margin:0 0 8px;font-size:27px;font-weight:500;line-height:1.28;letter-spacing:-.01em}
+  .lede{margin:0;max-width:860px;font-size:13.5px;color:var(--muted-fg)}
+  .decision{display:flex;gap:8px;margin:16px 0 0;padding:8px 12px;border-left:2px solid var(--brand);
+            background:var(--brand-6);font-size:12.5px;max-width:900px}
+  .decision b{font-weight:500}
+
+  .nav{display:flex;gap:4px;margin-top:18px;flex-wrap:wrap}
+  .nav a{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 10px;border:1px solid var(--border);
+         border-radius:6px;font-size:11.5px;color:var(--muted-fg);text-decoration:none;background:#fff}
+  .nav a.on{border-color:var(--border-strong);background:var(--brand-9);color:var(--brand-ink)}
+  .nav a span{font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-3)}
+
+  section{margin-top:64px}
+  .sec-hd{display:flex;align-items:baseline;gap:10px;margin-bottom:6px}
+  .sec-no{font-family:var(--mono);font-size:11px;color:var(--brand)}
+  h2{margin:0;font-size:18px;font-weight:500;letter-spacing:-.005em}
+  .sec-note{margin:0 0 22px;max-width:880px;font-size:13px;color:var(--muted-fg)}
+  h3{margin:34px 0 12px;font-size:13.5px;font-weight:500}
+  p{margin:0 0 12px;font-size:13px;color:var(--muted-fg);max-width:880px}
+  code{font-family:var(--mono);font-size:11px;color:var(--fg);background:var(--muted);border-radius:3px;padding:1px 4px}
+  kbd{display:inline-flex;align-items:center;justify-content:center;height:16px;min-width:16px;padding:0 4px;
+      border:1px solid var(--border);border-radius:3px;font-family:var(--mono);font-size:9.5px;line-height:1;color:var(--muted-fg-2)}
+  .i{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+  .i12{width:12px;height:12px}.i14{width:14px;height:14px}
+  .figure{position:relative;width:max-content;max-width:100%}
+  .cap{margin:12px 0 0;font-size:11.5px;color:var(--muted-fg-2);max-width:1060px}
+  .cap b{font-weight:500;color:var(--fg)}
+
+  /* 窗口 */
+  .win{position:relative;width:1280px;display:flex;flex-direction:column;background:var(--bg);
+       border:1px solid var(--border);border-radius:10px;overflow:hidden;box-shadow:var(--shadow-win)}
+  .bar{position:relative;flex:none;display:flex;align-items:center;height:36px;padding-left:16px;
+       background:var(--chrome);box-shadow:inset 0 -1px 0 var(--chrome-border)}
+  .brand{flex:none;padding-right:12px;font-size:12.5px;font-weight:500;line-height:1;color:var(--fg)}
+  .menus{display:flex;align-items:center;flex:none}
+  .mbtn{height:26px;padding:0 12px;border-radius:6px;font-size:12px;font-weight:500;line-height:26px;color:var(--brand-ink)}
+  .mbtn.open{background:var(--brand-12)}
+  .field-wrap{position:absolute;left:50%;top:5px;transform:translateX(-50%);width:400px}
+  .field{display:grid;grid-template-columns:12px minmax(0,1fr) auto;align-items:center;gap:8px;height:26px;
+         padding:0 6px 0 10px;border:1px solid var(--border);border-radius:7px;background:var(--bg);color:var(--muted-fg-2)}
+  .field .prompt{font-family:var(--mono);font-size:13px;color:var(--brand);text-align:center;transform:translateY(-1px)}
+  .field .ph{font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .icons{margin-left:auto;display:flex;align-items:center;gap:2px;flex:none}
+  .icon-btn{display:grid;place-items:center;width:28px;height:28px;border-radius:6px;color:var(--brand-ink)}
+  .icon-btn.on{background:var(--brand-12)}
+  .wctl{display:flex;margin-left:10px}
+  .wbtn{display:grid;place-items:center;width:46px;height:36px;color:var(--muted-fg);font-size:12px}
+  .tabstrip{flex:none;display:flex;align-items:center;gap:4px;height:34px;padding:0 10px;border-bottom:1px solid var(--border-soft)}
+  .tab{display:flex;align-items:center;gap:7px;height:26px;padding:0 8px 0 10px;border-radius:6px;font-size:11.5px;color:var(--muted-fg)}
+  .tab.on{background:var(--muted);color:var(--fg);font-weight:500}
+  .tab .badge{font-size:9px;color:var(--brand);background:var(--brand-9);border-radius:3px;padding:0 4px;line-height:14px}
+  .tab .x{color:var(--muted-fg-3)}
+
+  .canvas{position:relative;flex:none;height:470px;overflow:hidden;background-color:var(--bg);
+          background-image:radial-gradient(var(--canvas-dot) 1px,transparent 1px);background-size:22px 22px}
+  .edges{position:absolute;inset:0;width:100%;height:100%}
+  .edges path{fill:none;stroke:var(--canvas-line);stroke-width:1.25}
+  .rail{position:absolute;left:12px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:2px;
+        padding:3px;border:1px solid var(--border);border-radius:7px;background:var(--card);box-shadow:var(--shadow-card)}
+  .rail b{display:grid;place-items:center;width:24px;height:24px;border-radius:5px;color:var(--muted-fg-2)}
+  .rail .on{background:var(--brand-9);color:var(--brand-ink)}
+  .inputnode{position:absolute;width:360px;background:var(--paper);border:1px solid var(--border);border-radius:8px;
+             box-shadow:var(--shadow-card);overflow:hidden}
+  .inputnode .ih{display:flex;align-items:center;gap:8px;height:28px;padding:0 10px;border-bottom:1px solid var(--border-soft);
+                 font-family:var(--mono);font-size:10.5px;color:var(--fg)}
+  .inputnode .ih .m{margin-left:auto;font-family:var(--font);font-size:9.5px;color:var(--muted-fg-2)}
+  .inputnode table{width:100%;border-collapse:collapse;table-layout:fixed}
+  .inputnode th{height:22px;padding:0 8px;text-align:left;font-size:9.5px;font-weight:500;color:var(--muted-fg);
+                border-bottom:1px solid var(--border-soft)}
+  .inputnode td{height:21px;padding:0 8px;font-size:9.5px;color:var(--ink-88);border-bottom:1px solid color-mix(in oklab,var(--border) 55%,transparent);
+                white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .inputnode td.num{font-family:var(--mono);text-align:right;font-variant-numeric:tabular-nums}
+  .inputnode .if{display:flex;align-items:center;height:24px;padding:0 10px;border-top:1px solid var(--border-soft);
+                 font-family:var(--mono);font-size:9px;color:var(--muted-fg-2)}
+  .snode{position:absolute;width:200px;background:var(--card);border:1px solid var(--border);border-radius:8px;
+         box-shadow:var(--shadow-card);overflow:hidden}
+  .snode .sh{display:flex;align-items:center;gap:8px;padding:9px 11px 7px}
+  .snode .idx{font-family:var(--mono);font-size:9px;color:var(--muted-fg-2)}
+  .snode .nm{font-size:12px;font-weight:500;line-height:1.2;color:var(--fg)}
+  .snode .tag{margin-left:auto;font-family:var(--mono);font-size:9px;color:var(--muted-fg-2);
+              border:1px solid var(--border-soft);border-radius:3px;padding:0 4px;line-height:14px}
+  .snode .sb{padding:0 11px 9px;display:flex;flex-wrap:wrap;gap:4px}
+  .snode .p{font-family:var(--mono);font-size:9px;line-height:15px;color:var(--muted-fg);
+            background:var(--muted);border:1px solid var(--border-soft);border-radius:3px;padding:0 4px}
+
+  /* 执行菜单 */
+  .execmenu{position:absolute;left:420px;top:72px;width:320px;background:#fff;border:1px solid var(--border);
+            border-radius:10px;box-shadow:var(--shadow-menu);overflow:hidden;z-index:10}
+  .mgroup{display:flex;align-items:center;gap:5px;height:26px;padding:6px 9px 0;font-family:var(--mono);font-size:9px;color:var(--muted-fg-3)}
+  .mgroup b{font-weight:400;color:var(--muted-fg-2)}
+  .mrow{position:relative;display:grid;grid-template-columns:10px minmax(0,1fr) auto auto;align-items:center;gap:8px;
+        height:32px;padding:0 8px;border-radius:6px}
+  .mrow + .mrow{margin-top:1px}
+  .mrow.cur::before{content:"";position:absolute;left:0;top:6px;bottom:6px;width:2px;border-radius:2px;background:var(--brand)}
+  .mrow:hover{background:var(--ink-4)}
+  .lamp{width:7px;height:7px;border-radius:50%;justify-self:center;border:1px solid var(--border-strong);background:#fff}
+  .lamp.run{background:var(--brand);border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-9)}
+  .lamp.err{background:var(--danger);border-color:var(--danger)}
+  .mname{font-size:12px;font-weight:500;color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .mmeta{font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-2);white-space:nowrap}
+  .mact{display:inline-flex;align-items:center;gap:3px;height:22px;padding:0 7px;border-radius:5px;
+        font-size:10.5px;font-weight:500;line-height:22px;color:var(--brand-ink);background:var(--brand-9)}
+  .mact.quiet{background:transparent;color:var(--muted-fg-2)}
+  .mact.danger{background:transparent;border:1px solid color-mix(in oklab,var(--danger) 25%,transparent);color:var(--danger)}
+  .mact .ch{width:9px;height:9px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .mdiv{height:1px;background:var(--border-soft);margin:5px 8px}
+  .mfoot{display:flex;align-items:center;justify-content:space-between;height:30px;padding:0 10px;
+         border-top:1px solid var(--border-soft);font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-3)}
+  .mfoot .cap{font-family:var(--font);font-size:10px;color:var(--muted-fg-2);margin:0}
+
+  /* 选择级 */
+  .pback{display:flex;align-items:center;gap:6px;height:28px;padding:0 8px;border-bottom:1px solid var(--border-soft);
+         font-family:var(--mono);font-size:9px;color:var(--muted-fg-2)}
+  .pback .go{display:inline-flex;align-items:center;gap:3px;font-family:var(--font);font-size:10.5px;font-weight:500;color:var(--brand-ink)}
+  .pback .nm{margin-left:auto;font-family:var(--font);font-size:10px;color:var(--muted-fg-2)}
+  .pall{display:flex;align-items:center;gap:7px;height:24px;padding:0 10px;font-size:10.5px;color:var(--fg)}
+  .pall .sum{margin-left:auto;font-family:var(--mono);font-size:9px;color:var(--muted-fg-2);font-variant-numeric:tabular-nums}
+  .prows{border-top:1px solid var(--border-soft);border-bottom:1px solid var(--border-soft)}
+  .prow{display:grid;grid-template-columns:14px 20px minmax(0,1fr) 28px;align-items:center;gap:6px;
+        height:32px;padding:0 10px;border-bottom:1px solid var(--border-soft)}
+  .prow:last-child{border-bottom:0}
+  .prow.off{color:var(--muted-fg-2)}
+  .prow.off .idx,.prow.off .steps{color:var(--muted-fg-3)}
+  .prow.off .chain{opacity:.72}
+  .prow.hover{background:var(--ink-4)}
+  .idx{font-family:var(--mono);font-size:9px;color:var(--muted-fg-2)}
+  .chain{font-size:11px;color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .steps{font-family:var(--mono);font-size:9px;color:var(--muted-fg-2);text-align:right}
+  .only{font-size:9.5px;font-weight:500;color:var(--brand-ink);text-align:right}
+  .prisk{display:flex;align-items:center;gap:5px;height:22px;padding:0 10px;font-size:10px;color:var(--warning)}
+  .prisk.calm{color:var(--muted-fg-2)}
+  .prisk .sw{width:5px;height:5px;border-radius:50%;background:currentColor;flex:none}
+  .pfoot{display:flex;align-items:center;gap:6px;height:36px;padding:0 8px;border-top:1px solid var(--border-soft)}
+  .pfoot .hint{font-size:9.5px;color:var(--muted-fg-2)}
+  .pfoot .btn{margin-left:auto;height:24px;padding:0 9px;border-radius:5px;background:var(--brand);color:#fff;
+              font-size:10.5px;font-weight:500;line-height:24px;white-space:nowrap}
+  .pfoot .btn.disabled{background:var(--muted);color:var(--muted-fg-3);font-weight:400}
+
+  .cb{display:grid;place-items:center;width:14px;height:14px;border:1px solid var(--border-strong);
+      border-radius:3px;background:#fff;color:#fff;flex:none}
+  .cb.on{background:var(--brand);border-color:var(--brand)}
+  .cb.on svg{width:9px;height:9px;stroke:#fff;stroke-width:2.4;fill:none;stroke-linecap:round;stroke-linejoin:round}
+  .cb.ind{border-color:var(--brand);background:#fff}
+  .cb.ind::after{content:"";width:8px;height:1.5px;border-radius:1px;background:var(--brand)}
+  .cb.focus{box-shadow:0 0 0 2px var(--focus)}
+
+  /* 状态卡 */
+  .statecards{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;max-width:1296px}
+  .statecard{border:1px solid var(--border);border-radius:9px;background:#fff;padding:14px;box-shadow:var(--shadow-card)}
+  .statecard .sh{display:flex;align-items:baseline;gap:7px;margin-bottom:10px}
+  .statecard .sn{font-family:var(--mono);font-size:9.5px;color:var(--brand)}
+  .statecard .sh b{font-size:12.5px;font-weight:500}
+  .statecard .count{margin-left:auto;font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-2);font-variant-numeric:tabular-nums}
+  .statecard p{font-size:11px;line-height:1.55;margin:0 0 10px;color:var(--muted-fg)}
+  .statecard .mini{display:flex;align-items:center;justify-content:center;height:24px;margin-top:10px;border-radius:5px;
+                   background:var(--brand);color:#fff;font-size:10px;font-weight:500}
+  .statecard .mini.disabled{background:var(--muted);color:var(--muted-fg-3);font-weight:400}
+  .demo-row{display:grid;grid-template-columns:10px minmax(0,1fr) auto auto;align-items:center;gap:7px;
+            height:32px;padding:0 8px;border:1px solid var(--border-soft);border-radius:6px;background:var(--paper)}
+  .demo-row .lamp{width:7px;height:7px}
+  .demo-row .mname{font-size:11px}
+  .demo-row .mmeta{font-size:9px}
+  .demo-row .mact{height:20px;font-size:10px;line-height:20px}
+  .keys{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:12px;font-size:11px;color:var(--muted-fg-2)}
+  .keys .pair{display:flex;align-items:center;gap:5px}
+
+  /* 规格 */
+  .spec{display:grid;grid-template-columns:360px minmax(0,1fr);gap:40px;max-width:1180px;align-items:start}
+  .panel-anatomy{border:1px solid var(--border);border-radius:9px;background:#fff;overflow:hidden;box-shadow:var(--shadow-card);width:320px}
+  .panel-anatomy .back{display:flex;align-items:center;height:28px;padding:0 10px;border-bottom:1px solid var(--border-soft);
+                       font-family:var(--mono);font-size:9px;color:var(--muted-fg-2)}
+  .panel-anatomy .all{display:flex;align-items:center;gap:7px;height:24px;padding:0 10px;font-size:10.5px}
+  .panel-anatomy .all span{margin-left:auto;font-family:var(--mono);font-size:9px;color:var(--muted-fg-2)}
+  .panel-anatomy .pr{display:grid;grid-template-columns:14px 20px minmax(0,1fr) 28px;align-items:center;gap:6px;height:32px;padding:0 10px;
+                     border-top:1px solid var(--border-soft);font-size:11px}
+  .panel-anatomy .pr .steps{font-family:var(--mono);font-size:9px;color:var(--muted-fg-2);text-align:right}
+  .panel-anatomy .risk{display:flex;align-items:center;height:22px;padding:0 10px;border-top:1px solid var(--border-soft);
+                       font-size:10px;color:var(--warning)}
+  .panel-anatomy .foot{display:flex;align-items:center;height:36px;padding:0 8px;border-top:1px solid var(--border-soft);
+                       font-size:9.5px;color:var(--muted-fg-2)}
+  .panel-anatomy .foot b{margin-left:auto;height:24px;padding:0 9px;border-radius:5px;background:var(--brand);color:#fff;
+                         font-size:10.5px;font-weight:500;line-height:24px}
+  .dims{display:flex;gap:10px;margin-top:8px;font-family:var(--mono);font-size:8.5px;color:var(--muted-fg-3);flex-wrap:wrap}
+  .dims span{display:flex;align-items:center;gap:3px}
+  .dims i{display:block;width:12px;height:1px;background:var(--border-strong)}
+  .annot{border-left:2px solid var(--border-soft);padding-left:18px}
+  .annot ul{margin:0;padding:0;list-style:none}
+  .annot li{font-size:12px;color:var(--muted-fg);margin-bottom:9px;line-height:1.6}
+  .annot b{font-weight:500;color:var(--fg)}
+  .annot code{font-family:var(--mono);font-size:10px}
+
+  table.matrix{width:100%;max-width:1180px;border-collapse:collapse;background:#fff;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+  table.matrix th{height:32px;padding:0 12px;text-align:left;font-size:11px;font-weight:500;color:var(--muted-fg);
+                  border-bottom:1px solid var(--border-strong);background:color-mix(in oklab,var(--muted) 55%,#fff)}
+  table.matrix td{height:32px;padding:0 12px;font-size:12px;color:var(--ink-88);border-bottom:1px solid var(--border-soft)}
+  table.matrix tr:last-child td{border-bottom:0}
+  table.matrix td:first-child{font-family:var(--mono);font-size:10px;color:var(--muted-fg);width:190px}
+
+  table.keys{width:100%;max-width:1180px;border-collapse:collapse;background:#fff;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+  table.keys th{height:30px;padding:0 12px;text-align:left;font-size:10.5px;font-weight:500;color:var(--muted-fg);
+                border-bottom:1px solid var(--border-strong);background:color-mix(in oklab,var(--muted) 55%,#fff)}
+  table.keys td{height:28px;padding:0 12px;font-size:11.5px;color:var(--ink-88);border-bottom:1px solid var(--border-soft)}
+  table.keys tr:last-child td{border-bottom:0}
+  table.keys td:first-child{font-family:var(--mono);font-size:10px;color:var(--fg);width:190px}
+
+  .foot{margin-top:72px;padding-top:18px;border-top:1px solid var(--border);font-size:11px;color:var(--muted-fg-3);display:flex;justify-content:space-between}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="doc-head">
+    <div class="doc-no">086 / 05</div>
+    <div>
+      <h1>方案 A：分支选择放进「执行」菜单</h1>
+      <p class="lede">同一个面板做两级：第一级是标签页运行列表，第二级是该标签页的分支选择。多分支空闲行点击进入选择，单分支保持一键运行；底栏「运行」只做进度与结果。</p>
+      <div class="decision"><b>为什么可行</b>：选择分支属于「启动一次运行」，而「执行」菜单已经承担这个动作。drill-in 只复用一个面板，不需要二级 flyout 的贴边翻转与嵌套键盘；宽度从 240 调到 320 就能放下勾选、链名和覆盖提示。</div>
+      <nav class="nav">
+        <a href="01-audit.html">现状审计 <span>01</span></a>
+        <a href="02-option-a-run-list.html">方案 A 完整尺寸 <span>02</span></a>
+        <a href="03-option-b-segment-dag.html">方案 B 分段 DAG <span>03</span></a>
+        <a href="04-option-c-pipeline-jobs.html">方案 C 作业台 <span>04</span></a>
+        <a class="on" href="05-run-menu-branch-picker.html">菜单入口 <span>05</span></a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- 01 第一级 -->
+  <section>
+    <div class="sec-hd"><span class="sec-no">01</span><h2>第一级：行尾按钮说明接下来会发生什么</h2></div>
+    <p class="sec-note">多分支空闲行尾是「分支 ›」，单分支空闲行尾还是「执行」，运行中行只留「取消」。当前标签页置顶、左侧 2px 墨条，沿用 028 的约定。</p>
+
+    <div class="figure">
+      <div class="win">
+        <div class="bar">
+          <div class="brand">Easy CSV</div>
+          <div class="menus">
+            <div class="mbtn">文件</div><div class="mbtn">编辑</div><div class="mbtn">查看</div>
+            <div class="mbtn open">执行</div>
+            <div class="mbtn">工具</div><div class="mbtn">帮助</div>
+          </div>
+          <div class="field-wrap"><div class="field"><span class="prompt">›</span><span class="ph">搜索命令、步骤或文件</span><kbd>Ctrl F</kbd></div></div>
+          <div class="icons">
+            <div class="icon-btn on"><svg class="i" viewBox="0 0 24 24"><path d="M4 7h16M4 12h10M4 17h7"/></svg></div>
+            <div class="icon-btn"><svg class="i" viewBox="0 0 24 24"><path d="M4 5h16v12H4z"/><path d="M8 21h8M12 17v4"/></svg></div>
+          </div>
+          <div class="wctl"><div class="wbtn">—</div><div class="wbtn">□</div><div class="wbtn">×</div></div>
+        </div>
+
+        <div class="tabstrip">
+          <div class="tab on">销售清洗 <span class="x">×</span></div>
+          <div class="tab">订单聚合 <span class="x">×</span></div>
+          <div class="tab">库存核对 <span class="badge">运行中</span><span class="x">×</span></div>
+          <div class="tab" style="color:var(--muted-fg-3)">＋</div>
+        </div>
+
+        <div class="canvas">
+          <svg class="edges" viewBox="0 0 1280 470" preserveAspectRatio="none">
+            <path d="M380 170 C 430 170 460 182 520 182"/>
+            <path d="M720 182 C 760 182 780 92 820 92"/>
+            <path d="M720 182 C 760 182 780 222 820 222"/>
+            <path d="M720 182 C 760 182 780 342 820 342"/>
+          </svg>
+          <div class="rail">
+            <b class="on"><svg class="i i14" viewBox="0 0 24 24"><path d="M12 3v12M8 11l4 4 4-4"/><path d="M4 21h16"/></svg></b>
+            <b><svg class="i i14" viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h13"/></svg></b>
+            <b><svg class="i i14" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg></b>
+          </div>
+
+          <div class="inputnode" style="left:20px;top:92px">
+            <div class="ih"><svg class="i i12" viewBox="0 0 24 24"><path d="M4 4h16v16H4z"/><path d="M4 9h16M9 9v11"/></svg>sales_2026.csv<span class="m">4 行 × 4 列</span></div>
+            <table>
+              <colgroup><col style="width:30%"><col style="width:24%"><col style="width:20%"><col style="width:26%"></colgroup>
+              <tr><th>日期</th><th>地区</th><th>品类</th><th style="text-align:right">金额</th></tr>
+              <tr><td>2026-01-04</td><td>华东</td><td>办公</td><td class="num">12,480</td></tr>
+              <tr><td>2026-01-04</td><td>华南</td><td>耗材</td><td class="num">3,260</td></tr>
+              <tr><td>2026-01-05</td><td>华东</td><td>办公</td><td class="num">8,940</td></tr>
+              <tr><td>2026-01-05</td><td>华北</td><td>设备</td><td class="num">21,700</td></tr>
+            </table>
+            <div class="if">sales_2026.csv · 4 行 × 4 列</div>
+          </div>
+
+          <div class="snode" style="left:520px;top:150px">
+            <div class="sh"><span class="idx">01</span><span class="nm">filter</span><span class="tag">A</span></div>
+            <div class="sb"><span class="p">region = 华东</span></div>
+          </div>
+          <div class="snode" style="left:820px;top:58px">
+            <div class="sh"><span class="idx">02</span><span class="nm">groupby</span><span class="tag">B</span></div>
+            <div class="sb"><span class="p">by=品类</span><span class="p">sum(金额)</span></div>
+          </div>
+          <div class="snode" style="left:820px;top:188px">
+            <div class="sh"><span class="idx">03</span><span class="nm">sort</span><span class="tag">C</span></div>
+            <div class="sb"><span class="p">-k 金额</span><span class="p">--numeric</span></div>
+          </div>
+          <div class="snode" style="left:820px;top:308px">
+            <div class="sh"><span class="idx">04</span><span class="nm">dedup</span><span class="tag">D</span></div>
+            <div class="sb"><span class="p">category</span></div>
+          </div>
+
+          <div style="position:absolute;left:20px;top:12px;font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-3)">
+            3 条分支共享 filter · 未开始
+          </div>
+
+          <!-- 菜单第一级 -->
+          <div class="execmenu">
+            <div class="mgroup">空闲 <b>2</b></div>
+            <div class="mrow cur">
+              <span class="lamp"></span>
+              <span class="mname">销售清洗</span>
+              <span class="mmeta">3 条分支</span>
+              <span class="mact">分支
+                <svg class="ch" viewBox="0 0 12 12"><path d="M4.5 2.5L8 6l-3.5 3.5"/></svg>
+              </span>
+            </div>
+            <div class="mrow">
+              <span class="lamp"></span>
+              <span class="mname">订单聚合</span>
+              <span class="mmeta">1 条分支</span>
+              <span class="mact">执行</span>
+            </div>
+            <div class="mdiv"></div>
+            <div class="mgroup">运行中 <b>1</b></div>
+            <div class="mrow">
+              <span class="lamp run"></span>
+              <span class="mname">库存核对</span>
+              <span class="mmeta">分支 1/2</span>
+              <span class="mact danger">取消</span>
+            </div>
+            <div class="mfoot"><span class="cap">并发上限 4</span><span>Ctrl R</span></div>
+          </div>
+        </div>
+      </div>
+      <p class="cap"><b>行尾按钮 = 结果</b>：<b>分支 ›</b> 进入选择级；<b>执行</b> 直接跑单分支；<b>取消</b> 只属于运行中的行。行点击与按钮一致，不出现「按钮说 A、点行做 B」。</p>
+    </div>
+  </section>
+
+  <!-- 02 全选 -->
+  <section>
+    <div class="sec-hd"><span class="sec-no">02</span><h2>第二级：全选</h2></div>
+    <p class="sec-note">默认全选，与今天「点行执行」等价，但把覆盖次数提前说清。顶部返回行承担两级导航；主按钮是唯一启动点。</p>
+
+    <div class="figure">
+      <div class="win">
+        <div class="bar">
+          <div class="brand">Easy CSV</div>
+          <div class="menus">
+            <div class="mbtn">文件</div><div class="mbtn">编辑</div><div class="mbtn">查看</div>
+            <div class="mbtn open">执行</div>
+            <div class="mbtn">工具</div><div class="mbtn">帮助</div>
+          </div>
+          <div class="field-wrap"><div class="field"><span class="prompt">›</span><span class="ph">搜索命令、步骤或文件</span><kbd>Ctrl F</kbd></div></div>
+          <div class="icons">
+            <div class="icon-btn on"><svg class="i" viewBox="0 0 24 24"><path d="M4 7h16M4 12h10M4 17h7"/></svg></div>
+            <div class="icon-btn"><svg class="i" viewBox="0 0 24 24"><path d="M4 5h16v12H4z"/><path d="M8 21h8M12 17v4"/></svg></div>
+          </div>
+          <div class="wctl"><div class="wbtn">—</div><div class="wbtn">□</div><div class="wbtn">×</div></div>
+        </div>
+
+        <div class="tabstrip">
+          <div class="tab on">销售清洗 <span class="x">×</span></div>
+          <div class="tab">订单聚合 <span class="x">×</span></div>
+          <div class="tab">库存核对 <span class="badge">运行中</span><span class="x">×</span></div>
+          <div class="tab" style="color:var(--muted-fg-3)">＋</div>
+        </div>
+
+        <div class="canvas">
+          <svg class="edges" viewBox="0 0 1280 470" preserveAspectRatio="none">
+            <path d="M380 170 C 430 170 460 182 520 182"/>
+            <path d="M720 182 C 760 182 780 92 820 92"/>
+            <path d="M720 182 C 760 182 780 222 820 222"/>
+            <path d="M720 182 C 760 182 780 342 820 342"/>
+          </svg>
+          <div class="rail">
+            <b class="on"><svg class="i i14" viewBox="0 0 24 24"><path d="M12 3v12M8 11l4 4 4-4"/><path d="M4 21h16"/></svg></b>
+            <b><svg class="i i14" viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h13"/></svg></b>
+            <b><svg class="i i14" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg></b>
+          </div>
+
+          <div class="inputnode" style="left:20px;top:92px">
+            <div class="ih"><svg class="i i12" viewBox="0 0 24 24"><path d="M4 4h16v16H4z"/><path d="M4 9h16M9 9v11"/></svg>sales_2026.csv<span class="m">4 行 × 4 列</span></div>
+            <table>
+              <colgroup><col style="width:30%"><col style="width:24%"><col style="width:20%"><col style="width:26%"></colgroup>
+              <tr><th>日期</th><th>地区</th><th>品类</th><th style="text-align:right">金额</th></tr>
+              <tr><td>2026-01-04</td><td>华东</td><td>办公</td><td class="num">12,480</td></tr>
+              <tr><td>2026-01-04</td><td>华南</td><td>耗材</td><td class="num">3,260</td></tr>
+              <tr><td>2026-01-05</td><td>华东</td><td>办公</td><td class="num">8,940</td></tr>
+              <tr><td>2026-01-05</td><td>华北</td><td>设备</td><td class="num">21,700</td></tr>
+            </table>
+            <div class="if">sales_2026.csv · 4 行 × 4 列</div>
+          </div>
+
+          <div class="snode" style="left:520px;top:150px">
+            <div class="sh"><span class="idx">01</span><span class="nm">filter</span><span class="tag">A</span></div>
+            <div class="sb"><span class="p">region = 华东</span></div>
+          </div>
+          <div class="snode" style="left:820px;top:58px">
+            <div class="sh"><span class="idx">02</span><span class="nm">groupby</span><span class="tag">B</span></div>
+            <div class="sb"><span class="p">by=品类</span><span class="p">sum(金额)</span></div>
+          </div>
+          <div class="snode" style="left:820px;top:188px">
+            <div class="sh"><span class="idx">03</span><span class="nm">sort</span><span class="tag">C</span></div>
+            <div class="sb"><span class="p">-k 金额</span><span class="p">--numeric</span></div>
+          </div>
+          <div class="snode" style="left:820px;top:308px">
+            <div class="sh"><span class="idx">04</span><span class="nm">dedup</span><span class="tag">D</span></div>
+            <div class="sb"><span class="p">category</span></div>
+          </div>
+
+          <!-- 菜单选择级 · 全选 -->
+          <div class="execmenu">
+            <div class="pback">
+              <span class="go">‹ 返回</span>
+              <span class="nm">销售清洗</span>
+            </div>
+            <div class="pall">
+              <span class="cb on"><svg viewBox="0 0 12 12"><path d="M2.5 6.2l2.2 2.2 4.8-4.8"/></svg></span>
+              全选
+              <span class="sum">已选 3 / 3</span>
+            </div>
+            <div class="prows">
+              <div class="prow">
+                <span class="cb on"><svg viewBox="0 0 12 12"><path d="M2.5 6.2l2.2 2.2 4.8-4.8"/></svg></span>
+                <span class="idx">01</span>
+                <span class="chain">filter › groupby</span>
+                <span class="steps">2 步</span>
+              </div>
+              <div class="prow hover">
+                <span class="cb on"><svg viewBox="0 0 12 12"><path d="M2.5 6.2l2.2 2.2 4.8-4.8"/></svg></span>
+                <span class="idx">02</span>
+                <span class="chain">filter › sort</span>
+                <span class="only">只运行</span>
+              </div>
+              <div class="prow">
+                <span class="cb on"><svg viewBox="0 0 12 12"><path d="M2.5 6.2l2.2 2.2 4.8-4.8"/></svg></span>
+                <span class="idx">03</span>
+                <span class="chain">filter › dedup</span>
+                <span class="steps">2 步</span>
+              </div>
+            </div>
+            <div class="prisk"><span class="sw"></span>输出将被覆盖 3 次</div>
+            <div class="pfoot"><span class="hint">选择要运行的分支</span><span class="btn">运行全部 3 条</span></div>
+          </div>
+        </div>
+      </div>
+      <p class="cap"><b>选择级高度 ≈ 214px</b>：返回 28 / 全选 24 / 三行 96 / 风险 22 / 底栏 36。320 宽刚好放下勾选、链名和覆盖提示，不需要二级浮层。</p>
+    </div>
+  </section>
+
+  <!-- 03 只选一条 -->
+  <section>
+    <div class="sec-hd"><span class="sec-no">03</span><h2>第二级：只选一条</h2></div>
+    <p class="sec-note">取消两行后，计数、覆盖提示和主按钮一起变；只写一个文件时，警示降为中性提示。未选行仍然可读，也仍然可以勾回来。</p>
+
+    <div class="figure">
+      <div class="win">
+        <div class="bar">
+          <div class="brand">Easy CSV</div>
+          <div class="menus">
+            <div class="mbtn">文件</div><div class="mbtn">编辑</div><div class="mbtn">查看</div>
+            <div class="mbtn open">执行</div>
+            <div class="mbtn">工具</div><div class="mbtn">帮助</div>
+          </div>
+          <div class="field-wrap"><div class="field"><span class="prompt">›</span><span class="ph">搜索命令、步骤或文件</span><kbd>Ctrl F</kbd></div></div>
+          <div class="icons">
+            <div class="icon-btn on"><svg class="i" viewBox="0 0 24 24"><path d="M4 7h16M4 12h10M4 17h7"/></svg></div>
+            <div class="icon-btn"><svg class="i" viewBox="0 0 24 24"><path d="M4 5h16v12H4z"/><path d="M8 21h8M12 17v4"/></svg></div>
+          </div>
+          <div class="wctl"><div class="wbtn">—</div><div class="wbtn">□</div><div class="wbtn">×</div></div>
+        </div>
+
+        <div class="tabstrip">
+          <div class="tab on">销售清洗 <span class="x">×</span></div>
+          <div class="tab">订单聚合 <span class="x">×</span></div>
+          <div class="tab">库存核对 <span class="badge">运行中</span><span class="x">×</span></div>
+          <div class="tab" style="color:var(--muted-fg-3)">＋</div>
+        </div>
+
+        <div class="canvas">
+          <svg class="edges" viewBox="0 0 1280 470" preserveAspectRatio="none">
+            <path d="M380 170 C 430 170 460 182 520 182"/>
+            <path d="M720 182 C 760 182 780 92 820 92"/>
+            <path d="M720 182 C 760 182 780 222 820 222"/>
+            <path d="M720 182 C 760 182 780 342 820 342"/>
+          </svg>
+          <div class="rail">
+            <b class="on"><svg class="i i14" viewBox="0 0 24 24"><path d="M12 3v12M8 11l4 4 4-4"/><path d="M4 21h16"/></svg></b>
+            <b><svg class="i i14" viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h13"/></svg></b>
+            <b><svg class="i i14" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg></b>
+          </div>
+
+          <div class="inputnode" style="left:20px;top:92px">
+            <div class="ih"><svg class="i i12" viewBox="0 0 24 24"><path d="M4 4h16v16H4z"/><path d="M4 9h16M9 9v11"/></svg>sales_2026.csv<span class="m">4 行 × 4 列</span></div>
+            <table>
+              <colgroup><col style="width:30%"><col style="width:24%"><col style="width:20%"><col style="width:26%"></colgroup>
+              <tr><th>日期</th><th>地区</th><th>品类</th><th style="text-align:right">金额</th></tr>
+              <tr><td>2026-01-04</td><td>华东</td><td>办公</td><td class="num">12,480</td></tr>
+              <tr><td>2026-01-04</td><td>华南</td><td>耗材</td><td class="num">3,260</td></tr>
+              <tr><td>2026-01-05</td><td>华东</td><td>办公</td><td class="num">8,940</td></tr>
+              <tr><td>2026-01-05</td><td>华北</td><td>设备</td><td class="num">21,700</td></tr>
+            </table>
+            <div class="if">sales_2026.csv · 4 行 × 4 列</div>
+          </div>
+
+          <div class="snode" style="left:520px;top:150px">
+            <div class="sh"><span class="idx">01</span><span class="nm">filter</span><span class="tag">A</span></div>
+            <div class="sb"><span class="p">region = 华东</span></div>
+          </div>
+          <div class="snode" style="left:820px;top:58px">
+            <div class="sh"><span class="idx">02</span><span class="nm">groupby</span><span class="tag">B</span></div>
+            <div class="sb"><span class="p">by=品类</span><span class="p">sum(金额)</span></div>
+          </div>
+          <div class="snode" style="left:820px;top:188px;opacity:.72">
+            <div class="sh"><span class="idx">03</span><span class="nm">sort</span><span class="tag">C</span></div>
+            <div class="sb"><span class="p">-k 金额</span><span class="p">--numeric</span></div>
+          </div>
+          <div class="snode" style="left:820px;top:308px;opacity:.72">
+            <div class="sh"><span class="idx">04</span><span class="nm">dedup</span><span class="tag">D</span></div>
+            <div class="sb"><span class="p">category</span></div>
+          </div>
+
+          <!-- 菜单选择级 · 只选一条 -->
+          <div class="execmenu">
+            <div class="pback">
+              <span class="go">‹ 返回</span>
+              <span class="nm">销售清洗</span>
+            </div>
+            <div class="pall">
+              <span class="cb ind"></span>
+              全选
+              <span class="sum">已选 1 / 3</span>
+            </div>
+            <div class="prows">
+              <div class="prow">
+                <span class="cb on"><svg viewBox="0 0 12 12"><path d="M2.5 6.2l2.2 2.2 4.8-4.8"/></svg></span>
+                <span class="idx">01</span>
+                <span class="chain">filter › groupby</span>
+                <span class="steps">2 步</span>
+              </div>
+              <div class="prow off hover">
+                <span class="cb"></span>
+                <span class="idx">02</span>
+                <span class="chain">filter › sort</span>
+                <span class="only">只运行</span>
+              </div>
+              <div class="prow off">
+                <span class="cb"></span>
+                <span class="idx">03</span>
+                <span class="chain">filter › dedup</span>
+                <span class="steps">2 步</span>
+              </div>
+            </div>
+            <div class="prisk calm"><span class="sw"></span>输出将写入 1 次</div>
+            <div class="pfoot"><span class="hint">选择要运行的分支</span><span class="btn">运行所选 1 条</span></div>
+          </div>
+        </div>
+      </div>
+      <p class="cap"><b>未选行</b>降到 70% 对比度，链名仍可读；<b>全选框</b>显示半选，点一次恢复全选。<b>只写一次</b>时不再用琥珀色，避免把正常情况说成风险。</p>
+    </div>
+  </section>
+
+  <!-- 04 行语义与键盘 -->
+  <section>
+    <div class="sec-hd"><span class="sec-no">04</span><h2>行语义与键盘</h2></div>
+    <p class="sec-note">四种行只改行尾按钮和点击结果，不改行高、序号、状态灯的位置。选择级里 ↑↓ 移动、空格切换、回车运行、Esc 回上一级。</p>
+
+    <div class="statecards">
+      <div class="statecard">
+        <div class="sh"><span class="sn">01</span><b>空闲 · 多分支</b></div>
+        <p>点击行或「分支 ›」先切到该页，再进入选择级，默认全选。</p>
+        <div class="demo-row">
+          <span class="lamp"></span><span class="mname">销售清洗</span><span class="mmeta">3 条分支</span>
+          <span class="mact">分支 ›</span>
+        </div>
+      </div>
+      <div class="statecard">
+        <div class="sh"><span class="sn">02</span><b>空闲 · 单分支</b></div>
+        <p>保持现状：点击行直接运行，不经过选择级。</p>
+        <div class="demo-row">
+          <span class="lamp"></span><span class="mname">订单聚合</span><span class="mmeta">1 条分支</span>
+          <span class="mact">执行</span>
+        </div>
+      </div>
+      <div class="statecard">
+        <div class="sh"><span class="sn">03</span><b>运行中 / 排队</b></div>
+        <p>点击行切到该标签页；行尾只留取消 / 处理。</p>
+        <div class="demo-row">
+          <span class="lamp run"></span><span class="mname">库存核对</span><span class="mmeta">分支 1/2</span>
+          <span class="mact danger">取消</span>
+        </div>
+      </div>
+      <div class="statecard">
+        <div class="sh"><span class="sn">04</span><b>一条不选</b><span class="count">0 / 3</span></div>
+        <p>主按钮禁用，回车不执行；关闭菜单不产生 run。</p>
+        <div class="demo-row" style="grid-template-columns:14px 20px minmax(0,1fr);">
+          <span class="cb"></span><span class="idx">01</span><span class="chain">filter › groupby</span>
+        </div>
+        <div class="demo-row" style="grid-template-columns:14px 20px minmax(0,1fr);margin-top:4px;">
+          <span class="cb"></span><span class="idx">02</span><span class="chain">filter › sort</span>
+        </div>
+        <div class="mini disabled">选择分支</div>
+      </div>
+    </div>
+
+    <div class="keys">
+      <span class="pair"><kbd>↑</kbd><kbd>↓</kbd> 移动</span>
+      <span class="pair"><kbd>Space</kbd> 切换勾选</span>
+      <span class="pair"><kbd>Enter</kbd> 运行所选</span>
+      <span class="pair"><kbd>Esc</kbd> 回上一级 / 关闭</span>
+      <span class="pair" style="color:var(--muted-fg-3)">进入选择级时焦点在第一行复选框</span>
+    </div>
+  </section>
+
+  <!-- 05 规格 -->
+  <section>
+    <div class="sec-hd"><span class="sec-no">05</span><h2>规格与接缝</h2></div>
+    <p class="sec-note">面板宽度从 240 调到 320；选择级只复用一套组件，不新增二级浮层。选择状态只活在菜单里，关闭即丢弃。</p>
+
+    <div class="spec">
+      <div>
+        <div class="panel-anatomy">
+          <div class="back">‹ 返回<span style="margin-left:auto;font-family:var(--font);font-size:10px">销售清洗</span></div>
+          <div class="all"><span class="cb on"><svg viewBox="0 0 12 12"><path d="M2.5 6.2l2.2 2.2 4.8-4.8"/></svg></span>全选<span>已选 3 / 3</span></div>
+          <div class="pr"><span class="cb on"><svg viewBox="0 0 12 12"><path d="M2.5 6.2l2.2 2.2 4.8-4.8"/></svg></span><span class="idx">01</span><span class="chain">filter › groupby</span><span class="steps">2 步</span></div>
+          <div class="pr"><span class="cb on"><svg viewBox="0 0 12 12"><path d="M2.5 6.2l2.2 2.2 4.8-4.8"/></svg></span><span class="idx">02</span><span class="chain">filter › sort</span><span class="steps">2 步</span></div>
+          <div class="pr"><span class="cb on"><svg viewBox="0 0 12 12"><path d="M2.5 6.2l2.2 2.2 4.8-4.8"/></svg></span><span class="idx">03</span><span class="chain">filter › dedup</span><span class="steps">2 步</span></div>
+          <div class="risk"><span class="sw" style="width:5px;height:5px;border-radius:50%;background:currentColor;margin-right:5px"></span>输出将被覆盖 3 次</div>
+          <div class="foot">选择要运行的分支<b>运行全部 3 条</b></div>
+        </div>
+        <div class="dims">
+          <span><i></i>320 宽</span><span><i></i>32 行高</span><span><i></i>28 返回</span><span><i></i>36 底栏</span>
+        </div>
+        <p style="font-size:11px;color:var(--muted-fg-2);margin-top:10px">选择级超过 5 行时只滚动分支区；返回、全选、风险和主按钮固定。行悬停时步数换成「只运行」，不新增一列。</p>
+      </div>
+
+      <div class="annot">
+        <ul>
+          <li><b>第一级</b>：<code>MainMenu</code> 增 <code>pickerTabId</code>；空闲多分支行点击或「分支 ›」进入；单分支保持直接运行。</li>
+          <li><b>第二级</b>：<code>selectedIndexes</code> 本地 state，默认全选；<code>‹ 返回</code> 与 Esc 回第一级；再 Esc 关闭菜单。</li>
+          <li><b>分支数据</b>：App 计算 <code>branchesByTab: Record&lt;tabId, BranchSummary[]&gt;</code>，摘要只含 <code>index / stepNames / stepCount</code>；输出冲突由 host 计算。</li>
+          <li><b>启动</b>：<code>onRunTabBranches(tabId, indexes)</code> → <code>executeForTab(tab, { selectedBranchIndexes })</code>；菜单关闭后走现有校验与变量补值。</li>
+          <li><b>宽度</b>：<code>RUN_PANEL_WIDTH</code> 240 → 320；不做宽度动画，避免打开时横向抖动。</li>
+          <li><b>底栏</b>：只保留运行面板；不再渲染 680 宽计划页。完整计划页（原型 02）是内容规格，不是第二入口。</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>行语义</h3>
+    <table class="matrix">
+      <thead><tr><th>标签页状态</th><th>行点击</th><th>行尾按钮</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr><td>空闲 · 多分支</td><td>进入选择级</td><td>分支 ›</td><td>默认全选；确认后开始</td></tr>
+        <tr><td>空闲 · 单分支</td><td>直接运行</td><td>执行</td><td>与升级前一致</td></tr>
+        <tr><td>运行中</td><td>切到该标签页</td><td>取消</td><td>只取消自己的 run</td></tr>
+        <tr><td>排队 / 待处理</td><td>切到该标签页</td><td>处理</td><td>变量补值 / 覆盖确认</td></tr>
+        <tr><td>无步骤</td><td>不动作</td><td>执行（禁用）</td><td>保持现状</td></tr>
+      </tbody>
+    </table>
+
+    <h3>新增文案</h3>
+    <table class="keys">
+      <thead><tr><th>key</th><th>中文</th><th>英文</th></tr></thead>
+      <tbody>
+        <tr><td>runPickBranches</td><td>分支</td><td>Branches</td></tr>
+        <tr><td>runBackToTabs</td><td>返回标签页</td><td>Back to tabs</td></tr>
+        <tr><td>runBranchCount</td><td>{count} 条分支</td><td>{count} branches</td></tr>
+        <tr><td>runNoSelectionHint</td><td>选择要运行的分支</td><td>Choose branches to run</td></tr>
+        <tr><td>runSelectedCount</td><td>已选 {selected} / {total}</td><td>{selected} of {total} selected</td></tr>
+        <tr><td>runAllAction</td><td>运行全部 {count} 条</td><td>Run all {count}</td></tr>
+        <tr><td>runSelectedAction</td><td>运行所选 {count} 条</td><td>Run {count} selected</td></tr>
+        <tr><td>runNoSelection</td><td>选择分支</td><td>Choose branches</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <div class="foot">
+    <span>Easy CSV · 设计原型 086-05</span>
+    <span>独立 HTML，仅用于评审</span>
+  </div>
+</div>
+</body>
+</html>

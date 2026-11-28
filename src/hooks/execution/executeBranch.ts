@@ -15,13 +15,17 @@ interface BranchOutcome {
   cancelled?: boolean;
   stepErrors?: Record<string, string>;
   branchStepNames: string[];
+  durationMs?: number;
 }
 
 interface ExecuteBranchArgs {
   /** Per-run context: tabId/runId/delimiter never drift when the user switches tabs. */
   ctx: RunContext;
   branchSteps: PipelineStep[];
+  /** Original plan index, used by the run panel and node states. */
   index: number;
+  /** 0-based position among the selected branches (progress/log numbering). */
+  order: number;
   total: number;
   outputPath: string;
   currentTab: PipelineTab;
@@ -38,6 +42,7 @@ export async function executeSingleBranch({
   ctx,
   branchSteps,
   index,
+  order,
   total,
   outputPath,
   currentTab,
@@ -50,24 +55,57 @@ export async function executeSingleBranch({
 
   const branchStepNames = branchSteps.map((s) => s.alias || s.command.name);
   const branchName = branchStepNames.join(" -> ");
-  ctx.log("info", `Executing branch ${index + 1}/${total}: ${branchName}`);
+  const startedAt = Date.now();
+  ctx.log("info", `Executing branch ${order + 1}/${total}: ${branchName}`);
 
   ctx.onProgress({
-    current: index + 1,
+    current: order + 1,
     total,
     name: branchName,
     status: "executing",
   });
+  // The backend runs a branch as one process chain, so only the first step can
+  // be marked running; the rest settle when the branch returns.
+  ctx.onBranchState(index, {
+    status: "running",
+    startedAt,
+    currentStepId: branchSteps[0]?.id,
+  });
+  ctx.onStepState(index, branchSteps[0].id, "running");
 
-  const failBranch = (error: string): BranchOutcome => {
+  const failBranch = (
+    error: string,
+    failedStepId?: string,
+  ): BranchOutcome => {
+    const durationMs = Date.now() - startedAt;
+    const failedIndex = failedStepId
+      ? branchSteps.findIndex((step) => step.id === failedStepId)
+      : -1;
     ctx.onProgress({
-      current: index + 1,
+      current: order + 1,
       total,
       name: branchName,
       status: "error",
     });
+    ctx.onBranchState(index, {
+      status: "error",
+      error,
+      durationMs,
+      currentStepId: undefined,
+    });
+    branchSteps.forEach((step, stepIndex) => {
+      if (failedIndex < 0) {
+        ctx.onStepState(index, step.id, "error");
+      } else if (stepIndex < failedIndex) {
+        ctx.onStepState(index, step.id, "done");
+      } else if (stepIndex === failedIndex) {
+        ctx.onStepState(index, step.id, "error");
+      } else {
+        ctx.onStepState(index, step.id, "skipped");
+      }
+    });
     markFailed();
-    return { success: false, error, branchStepNames };
+    return { success: false, error, branchStepNames, durationMs };
   };
 
   // Check if branch contains batch-from and batch-to steps
@@ -212,39 +250,82 @@ export async function executeSingleBranch({
     });
   }
 
+  const durationMs = Date.now() - startedAt;
+
   if (result?.cancelled) {
     ctx.onProgress({
-      current: index + 1,
+      current: order + 1,
       total,
       name: branchName,
       status: "error",
     });
+    ctx.onBranchState(index, {
+      status: "cancelled",
+      durationMs,
+      currentStepId: undefined,
+    });
+    branchSteps.forEach((step) => ctx.onStepState(index, step.id, "skipped"));
     markFailed();
-    return { ...result, cancelled: true, branchStepNames };
+    return {
+      ...result,
+      cancelled: true,
+      branchStepNames,
+      durationMs,
+    };
   }
 
   ctx.onProgress({
-    current: index + 1,
+    current: order + 1,
     total,
     name: branchName,
     status: result.success ? "completed" : "error",
   });
 
+  const stepErrors = firstStepError(branchSteps, result.step_errors);
+
   if (result.success) {
+    ctx.onBranchState(index, {
+      status: "done",
+      durationMs,
+      output: result.output,
+      currentStepId: undefined,
+    });
+    branchSteps.forEach((step) => ctx.onStepState(index, step.id, "done"));
     if (result.output) {
       const output = (result.output as string).trimStart().trimEnd();
       ctx.log("success", `${output}`);
     } else {
       ctx.log(
         "info",
-        `Branch ${index + 1} completed successfully with no output`,
+        `Branch ${order + 1} completed successfully with no output`,
       );
     }
   } else {
+    const failedId = stepErrors ? Object.keys(stepErrors)[0] : undefined;
+    const failedIndex = failedId
+      ? branchSteps.findIndex((step) => step.id === failedId)
+      : -1;
+    ctx.onBranchState(index, {
+      status: "error",
+      error: result.error,
+      durationMs,
+      currentStepId: undefined,
+    });
+    branchSteps.forEach((step, stepIndex) => {
+      if (failedIndex < 0) {
+        ctx.onStepState(index, step.id, "error");
+      } else if (stepIndex < failedIndex) {
+        ctx.onStepState(index, step.id, "done");
+      } else if (stepIndex === failedIndex) {
+        ctx.onStepState(index, step.id, "error");
+      } else {
+        ctx.onStepState(index, step.id, "skipped");
+      }
+    });
     if (result.error) {
       ctx.log("error", `${result.error}`);
     } else {
-      ctx.log("error", `Branch ${index + 1} failed with no error message`);
+      ctx.log("error", `Branch ${order + 1} failed with no error message`);
     }
   }
 
@@ -252,8 +333,9 @@ export async function executeSingleBranch({
     success: result.success,
     output: result.output,
     error: result.error,
-    stepErrors: firstStepError(branchSteps, result.step_errors),
+    stepErrors,
     branchStepNames,
+    durationMs,
   };
 }
 

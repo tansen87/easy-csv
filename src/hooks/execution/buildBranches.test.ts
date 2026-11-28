@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { buildExecutionBranches } from "@/hooks/execution/buildBranches";
+import {
+  buildExecutionBranches,
+  buildRunPlan,
+} from "@/hooks/execution/buildBranches";
 import { buildPrefixToStep } from "@/hooks/execution/buildPrefixToStep";
 import type { PipelineEdge, PipelineStep } from "@/types/xan";
 
@@ -102,6 +105,44 @@ describe("buildExecutionBranches", () => {
     // so this is actually the normal root path; assert both roots run alone.
     const idPaths = branches.map((b) => b.map((s) => s.id)).sort();
     expect(idPaths).toEqual([["a"], ["b"]]);
+  });
+});
+
+describe("buildRunPlan", () => {
+  const steps = [step("a"), step("b"), step("c"), step("d")];
+  const edges = [
+    edge("a", "b"),
+    edge("a", "c"),
+    edge("b", "d"),
+    edge("c", "d"),
+  ];
+
+  it("defaults to all branches and counts repeated steps", () => {
+    const plan = buildRunPlan(steps, edges);
+    expect(plan.selectedIndexes).toEqual([0, 1]);
+    expect(plan.totalStepCount).toBe(6);
+    expect(plan.uniqueStepIds.sort()).toEqual(["a", "b", "c", "d"]);
+    expect(plan.repeatedStepIds.sort()).toEqual(["a", "d"]);
+  });
+
+  it("only counts the selected branch", () => {
+    const plan = buildRunPlan(steps, edges, [1]);
+    expect(plan.selectedIndexes).toEqual([1]);
+    expect(plan.totalStepCount).toBe(3);
+    expect(plan.uniqueStepIds.sort()).toEqual(["a", "c", "d"]);
+    expect(plan.repeatedStepIds).toEqual([]);
+  });
+
+  it("drops unknown indexes and keeps plan order", () => {
+    const plan = buildRunPlan(steps, edges, [1, 99, 0]);
+    expect(plan.selectedIndexes).toEqual([0, 1]);
+  });
+
+  it("an empty selection is valid and means zero work", () => {
+    const plan = buildRunPlan(steps, edges, []);
+    expect(plan.selectedIndexes).toEqual([]);
+    expect(plan.totalStepCount).toBe(0);
+    expect(plan.uniqueStepIds).toEqual([]);
   });
 });
 

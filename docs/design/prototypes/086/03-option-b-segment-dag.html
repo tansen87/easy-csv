@@ -1,0 +1,570 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>原型 086-03 · 方案 B 分段 DAG</title>
+<style>
+  :root{
+    --font:"Inter","Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Consolas,monospace;
+
+    --bg:#fff;
+    --fg:oklch(0.145 0 0);
+    --ink-88:color-mix(in oklab, oklch(0.145 0 0) 88%, #fff);
+    --ink-4:color-mix(in oklab, oklch(0.145 0 0) 4%, transparent);
+    --muted:oklch(0.97 0 0);
+    --muted-fg:oklch(0.556 0 0);
+    --muted-fg-2:oklch(0.66 0 0);
+    --muted-fg-3:oklch(0.76 0 0);
+    --border:oklch(0.922 0 0);
+    --border-soft:oklch(0.2 0.01 80 / 8%);
+    --border-strong:oklch(0.2 0.01 80 / 22%);
+
+    --brand:oklch(0.42 0.055 250);
+    --brand-ink:oklch(0.35 0.05 250);
+    --brand-6:color-mix(in oklab, oklch(0.42 0.055 250) 6%, transparent);
+    --brand-9:color-mix(in oklab, oklch(0.42 0.055 250) 9%, transparent);
+    --brand-12:color-mix(in oklab, oklch(0.42 0.055 250) 12%, transparent);
+    --chrome:color-mix(in oklab, oklch(0.42 0.055 250) 12%, #fff);
+    --chrome-border:color-mix(in oklab, oklch(0.42 0.055 250) 30%, transparent);
+
+    --stage:oklch(0.975 0.004 85);
+    --paper:oklch(0.995 0.004 85);
+    --canvas-dot:oklch(0.2 0.01 80 / 11%);
+    --canvas-line:oklch(0.2 0.01 80 / 30%);
+    --shadow-card:0 1px 2px oklch(0.2 0.02 80 / 5%);
+    --shadow-win:0 24px 64px -34px oklch(0.2 0.02 80 / 34%),0 2px 6px oklch(0.2 0.02 80 / 6%);
+    --shadow-up:0 -12px 28px -22px oklch(0.2 0.02 80 / 40%);
+
+    --success:oklch(0.52 0.09 150);
+    --success-soft:color-mix(in oklab, oklch(0.52 0.09 150) 10%, transparent);
+    --danger:oklch(0.53 0.13 27);
+    --danger-soft:color-mix(in oklab, oklch(0.53 0.13 27) 8%, transparent);
+    --warning:oklch(0.55 0.1 72);
+    --warning-soft:color-mix(in oklab, oklch(0.55 0.1 72) 10%, transparent);
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--stage)}
+  body{font-family:var(--font);color:var(--fg);font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased}
+  .page{max-width:1424px;margin:0 auto;padding:56px 32px 104px}
+
+  .doc-head{display:grid;grid-template-columns:76px minmax(0,1fr);gap:24px;padding-bottom:26px;border-bottom:1px solid var(--border-strong)}
+  .doc-no{font-family:var(--mono);font-size:12px;color:var(--muted-fg);padding-top:6px;letter-spacing:.02em}
+  h1{margin:0 0 8px;font-size:27px;font-weight:500;line-height:1.28;letter-spacing:-.01em}
+  .lede{margin:0;max-width:860px;font-size:13.5px;color:var(--muted-fg)}
+  .decision{display:flex;gap:8px;margin:16px 0 0;padding:8px 12px;border-left:2px solid var(--brand);
+            background:var(--brand-6);font-size:12.5px;max-width:880px}
+  .decision b{font-weight:500}
+
+  .nav{display:flex;gap:4px;margin-top:18px;flex-wrap:wrap}
+  .nav a{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 10px;border:1px solid var(--border);
+         border-radius:6px;font-size:11.5px;color:var(--muted-fg);text-decoration:none;background:#fff}
+  .nav a.on{border-color:var(--border-strong);background:var(--brand-9);color:var(--brand-ink)}
+  .nav a span{font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-3)}
+
+  section{margin-top:64px}
+  .sec-hd{display:flex;align-items:baseline;gap:10px;margin-bottom:6px}
+  .sec-no{font-family:var(--mono);font-size:11px;color:var(--brand)}
+  h2{margin:0;font-size:18px;font-weight:500;letter-spacing:-.005em}
+  .sec-note{margin:0 0 22px;max-width:860px;font-size:13px;color:var(--muted-fg)}
+  h3{margin:34px 0 12px;font-size:13.5px;font-weight:500}
+  p{margin:0 0 12px;font-size:13px;color:var(--muted-fg);max-width:860px}
+  code{font-family:var(--mono);font-size:11px;color:var(--fg);background:var(--muted);border-radius:3px;padding:1px 4px}
+
+  kbd{display:inline-flex;align-items:center;justify-content:center;height:16px;min-width:16px;padding:0 4px;
+      border:1px solid var(--border);border-radius:3px;font-family:var(--mono);font-size:9.5px;line-height:1;color:var(--muted-fg-2)}
+  .i{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+  .i12{width:12px;height:12px}.i14{width:14px;height:14px}
+  .figure{position:relative;width:max-content;max-width:100%}
+  .cap{margin:12px 0 0;font-size:11.5px;color:var(--muted-fg-2);max-width:1080px}
+  .cap b{font-weight:500;color:var(--fg)}
+
+  /* 窗口 */
+  .win{position:relative;width:1296px;display:flex;flex-direction:column;background:var(--bg);
+       border:1px solid var(--border);border-radius:10px;overflow:hidden;box-shadow:var(--shadow-win)}
+  .bar{position:relative;flex:none;display:flex;align-items:center;height:36px;padding-left:16px;
+       background:var(--chrome);box-shadow:inset 0 -1px 0 var(--chrome-border)}
+  .brand{flex:none;padding-right:12px;font-size:12.5px;font-weight:500;line-height:1;color:var(--fg)}
+  .menus{display:flex;align-items:center;flex:none}
+  .mbtn{height:26px;padding:0 12px;border-radius:6px;font-size:12px;font-weight:500;line-height:26px;color:var(--brand-ink)}
+  .field-wrap{position:absolute;left:50%;top:5px;transform:translateX(-50%);width:390px}
+  .field{display:grid;grid-template-columns:12px minmax(0,1fr) auto;align-items:center;gap:8px;height:26px;
+         padding:0 6px 0 10px;border:1px solid var(--border);border-radius:7px;background:var(--bg);color:var(--muted-fg-2)}
+  .field .prompt{font-family:var(--mono);font-size:13px;color:var(--brand);text-align:center;transform:translateY(-1px)}
+  .field .ph{font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .icons{margin-left:auto;display:flex;align-items:center;gap:2px;flex:none}
+  .icon-btn{display:grid;place-items:center;width:28px;height:28px;border-radius:6px;color:var(--brand-ink)}
+  .icon-btn.on{background:var(--brand-12)}
+  .wctl{display:flex;margin-left:10px}
+  .wbtn{display:grid;place-items:center;width:46px;height:36px;color:var(--muted-fg);font-size:12px}
+  .tabstrip{flex:none;display:flex;align-items:center;gap:4px;height:34px;padding:0 10px;border-bottom:1px solid var(--border-soft)}
+  .tab{display:flex;align-items:center;gap:7px;height:26px;padding:0 8px 0 10px;border-radius:6px;font-size:11.5px;color:var(--muted-fg)}
+  .tab.on{background:var(--muted);color:var(--fg);font-weight:500}
+  .tab .badge{font-size:9px;color:var(--brand);background:var(--brand-9);border-radius:3px;padding:0 4px;line-height:14px}
+  .tab .x{color:var(--muted-fg-3)}
+
+  .canvas{position:relative;flex:none;height:430px;overflow:hidden;background-color:var(--bg);
+          background-image:radial-gradient(var(--canvas-dot) 1px,transparent 1px);background-size:22px 22px}
+  .edges{position:absolute;inset:0;width:100%;height:100%}
+  .edges path{fill:none;stroke:var(--canvas-line);stroke-width:1.25}
+  .edges .seg{stroke-width:1.75;stroke:color-mix(in oklab,var(--brand) 45%,transparent)}
+  .edges .flow{stroke:var(--brand);stroke-width:1.5;stroke-dasharray:5 4}
+
+  .segbox{position:absolute;border:1px dashed color-mix(in oklab,var(--brand) 30%,transparent);border-radius:10px;pointer-events:none}
+  .segbox .sl{position:absolute;left:0;top:-17px;font-family:var(--mono);font-size:9px;color:var(--brand);
+              background:var(--brand-9);border-radius:3px;padding:0 4px;line-height:15px}
+  .parband{position:absolute;width:8px;border:1px solid color-mix(in oklab,var(--brand) 28%,transparent);
+           border-right:0;border-radius:6px 0 0 6px;pointer-events:none}
+  .parband .pl{position:absolute;left:10px;top:-15px;white-space:nowrap;
+               font-family:var(--mono);font-size:9px;color:var(--brand);background:#fff;padding:0 4px}
+
+  .inputnode{position:absolute;width:330px;background:var(--paper);border:1px solid var(--border);border-radius:8px;
+             box-shadow:var(--shadow-card);overflow:hidden}
+  .inputnode .ih{display:flex;align-items:center;gap:8px;height:28px;padding:0 10px;border-bottom:1px solid var(--border-soft);
+                 font-family:var(--mono);font-size:10px;color:var(--fg)}
+  .inputnode .ih .m{margin-left:auto;font-family:var(--font);font-size:9px;color:var(--muted-fg-2)}
+  .inputnode table{width:100%;border-collapse:collapse;table-layout:fixed}
+  .inputnode th{height:21px;padding:0 8px;text-align:left;font-size:9px;font-weight:500;color:var(--muted-fg);
+                border-bottom:1px solid var(--border-soft)}
+  .inputnode td{height:20px;padding:0 8px;font-size:9px;color:var(--ink-88);border-bottom:1px solid color-mix(in oklab,var(--border) 55%,transparent);
+                white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .inputnode td.num{font-family:var(--mono);text-align:right;font-variant-numeric:tabular-nums}
+  .inputnode .if{display:flex;align-items:center;height:22px;padding:0 10px;border-top:1px solid var(--border-soft);
+                 font-family:var(--mono);font-size:8.5px;color:var(--muted-fg-2)}
+
+  .snode{position:absolute;width:200px;background:var(--card);border:1px solid var(--border);border-radius:8px;
+         box-shadow:var(--shadow-card);overflow:hidden}
+  .snode .sh{display:flex;align-items:center;gap:7px;padding:8px 10px 6px}
+  .snode .idx{display:grid;place-items:center;min-width:19px;height:15px;padding:0 4px;border-radius:3px;
+              font-family:var(--mono);font-size:8.5px;color:var(--muted-fg-2);background:var(--muted)}
+  .snode .nm{font-size:11.5px;font-weight:500;line-height:1.2;color:var(--fg)}
+  .snode .tag{margin-left:auto;font-family:var(--mono);font-size:8.5px;color:var(--muted-fg-2);
+              border:1px solid var(--border-soft);border-radius:3px;padding:0 3px;line-height:13px}
+  .snode .sb{padding:0 10px 8px;display:flex;flex-wrap:wrap;gap:4px}
+  .snode .p{font-family:var(--mono);font-size:8.5px;line-height:14px;color:var(--muted-fg);
+            background:var(--muted);border:1px solid var(--border-soft);border-radius:3px;padding:0 4px}
+  .snode .merge{margin:0 10px 7px;display:inline-flex;align-items:center;gap:4px;height:15px;padding:0 5px;border-radius:3px;
+                font-family:var(--mono);font-size:8.5px;color:var(--brand-ink);background:var(--brand-9);
+                border:1px solid color-mix(in oklab,var(--brand) 24%,transparent)}
+  .snode.running{border-color:color-mix(in oklab,var(--brand) 45%,transparent)}
+  .snode.running::before{content:"";position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--brand)}
+  .snode.running .idx{background:var(--brand);color:#fff}
+  .snode.done .idx{background:var(--brand-soft);color:var(--brand-ink)}
+  .snode .cur{margin:0 10px 7px;font-family:var(--mono);font-size:8.5px;color:var(--brand-ink)}
+  .snode.dim{opacity:.64}
+
+  /* 物化文件牌 */
+  .filec{position:absolute;display:flex;align-items:center;gap:4px;height:18px;padding:0 5px;border-radius:3px;
+         background:#fff;border:1px solid var(--border);box-shadow:var(--shadow-card);
+         font-family:var(--mono);font-size:8.5px;color:var(--muted-fg-2)}
+  .filec.done{border-color:color-mix(in oklab,var(--success) 30%,transparent);color:var(--success)}
+  .filec.live{border-color:color-mix(in oklab,var(--brand) 34%,transparent);color:var(--brand-ink)}
+
+  /* 抽屉 */
+  .dock{flex:none;display:flex;flex-direction:column;background:#fff;border-top:1px solid var(--border-strong);box-shadow:var(--shadow-up)}
+  .dock-head{flex:none;display:flex;align-items:center;gap:8px;height:32px;padding:0 8px;border-bottom:1px solid var(--border-soft)}
+  .dock-tabs{display:flex;flex:none;align-items:center;gap:2px}
+  .vrule{flex:none;width:1px;height:12px;background:var(--border-soft)}
+  .dtab{display:flex;align-items:center;gap:7px;height:26px;padding:0 9px;border-radius:6px;font-size:11.5px;color:var(--muted-fg)}
+  .dtab.on{background:color-mix(in oklab,var(--brand) 12%,#fff);color:var(--fg);font-weight:500}
+  .dtab .cnt{font-family:var(--mono);font-size:10px;color:var(--muted-fg-2);font-variant-numeric:tabular-nums}
+  .dtab .dot{width:5px;height:5px;border-radius:50%;background:var(--muted-fg-3)}
+  .dtab .dot.live{background:var(--brand)}
+  .runhead{display:flex;align-items:center;gap:10px;height:34px;padding:0 14px;border-bottom:1px solid var(--border-soft)}
+  .runhead .sum{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:10px;color:var(--muted-fg-2);font-variant-numeric:tabular-nums}
+  .runhead .sum b{font-weight:400;color:var(--fg)}
+  .runhead .sum .g{display:flex;align-items:center;gap:4px}
+  .runhead .lamp{width:5px;height:5px;border-radius:50%}
+  .runhead .sp{flex:1}
+  .runhead .of{font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-3)}
+  .runlist{background:#fff}
+  .runrow{display:grid;grid-template-columns:48px minmax(0,1fr) 82px 104px 56px 84px;align-items:center;height:36px;
+          padding:0 14px;border-bottom:1px solid var(--border-soft)}
+  .runrow:last-child{border-bottom:0}
+  .runrow .n{font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-2)}
+  .runrow .chain{display:flex;align-items:center;gap:6px;min-width:0}
+  .runrow .step{font-size:11.5px;color:var(--fg);white-space:nowrap}
+  .runrow .arr{font-size:9px;color:var(--muted-fg-3)}
+  .runrow .st{display:flex;align-items:center;gap:6px;font-size:10.5px;color:var(--muted-fg)}
+  .runrow .lamp{width:6px;height:6px;border-radius:50%;flex:none}
+  .runrow .lamp.run{background:var(--brand);box-shadow:0 0 0 3px var(--brand-9)}
+  .runrow .lamp.ok{background:var(--success)}
+  .runrow .lamp.wait{border:1px solid var(--border-strong);background:transparent}
+  .runrow .cur{font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .runrow .time{font-family:var(--mono);font-size:10px;color:var(--muted-fg-2);text-align:right;font-variant-numeric:tabular-nums}
+  .runrow .acts{display:flex;justify-content:flex-end;gap:6px;font-size:10px;color:var(--brand-ink)}
+  .runrow .acts .m{color:var(--muted-fg-3)}
+  .runrow .par{display:flex;align-items:center;gap:6px}
+  .runrow .parb{width:7px;height:24px;border-left:1px solid color-mix(in oklab,var(--brand) 35%,transparent);
+                border-top:1px solid color-mix(in oklab,var(--brand) 35%,transparent);
+                border-bottom:1px solid color-mix(in oklab,var(--brand) 35%,transparent);border-radius:3px 0 0 3px}
+
+  /* 规则与对比 */
+  .rules{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border:1px solid var(--border);border-radius:9px;
+         background:#fff;overflow:hidden;max-width:1296px;box-shadow:var(--shadow-card)}
+  .rule{padding:16px 16px 14px;border-right:1px solid var(--border-soft)}
+  .rule:last-child{border-right:0}
+  .rule .rn{font-family:var(--mono);font-size:10px;color:var(--brand)}
+  .rule h4{margin:3px 0 7px;font-size:12.5px;font-weight:500}
+  .rule p{font-size:11.5px;line-height:1.55;margin:0;color:var(--muted-fg)}
+  .rule code{font-size:9.5px}
+
+  .pair{display:grid;grid-template-columns:1fr 1fr;gap:20px;max-width:1296px}
+  .panel{border:1px solid var(--border);border-radius:9px;background:#fff;padding:16px;box-shadow:var(--shadow-card)}
+  .panel h4{margin:0 0 4px;font-size:12.5px;font-weight:500}
+  .panel .pn{font-family:var(--mono);font-size:9.5px;color:var(--brand);margin-bottom:6px}
+  .panel p{font-size:11.5px;line-height:1.6;margin:0 0 12px;color:var(--muted-fg)}
+  .panel .demo{border:1px solid var(--border-soft);border-radius:7px;background:var(--paper);padding:12px;min-height:104px}
+  .mergecard{background:#fff;border:1px solid var(--border);border-radius:7px;padding:9px 10px;box-shadow:var(--shadow-card);width:240px}
+  .mergecard .mh{display:flex;align-items:center;gap:7px;font-size:11.5px;font-weight:500}
+  .mergecard .badge{margin-left:auto;display:inline-flex;align-items:center;gap:4px;height:16px;padding:0 5px;border-radius:3px;
+                    font-family:var(--mono);font-size:8.5px;color:var(--brand-ink);background:var(--brand-9);
+                    border:1px solid color-mix(in oklab,var(--brand) 24%,transparent)}
+  .mergecard .mb{margin-top:6px;font-family:var(--mono);font-size:9px;line-height:1.5;color:var(--muted-fg)}
+  .pathdemo{display:flex;flex-direction:column;gap:8px}
+  .pathfield{display:flex;align-items:center;gap:8px;height:28px;padding:0 8px;border:1px solid var(--border);border-radius:5px;background:#fff;
+             font-family:var(--mono);font-size:10px;color:var(--fg)}
+  .pathfield .ph{color:var(--muted-fg-2)}
+  .pathfield .cursor{width:1px;height:13px;background:var(--brand)}
+  .chips{display:flex;gap:6px;flex-wrap:wrap}
+  .chip{display:inline-flex;align-items:center;height:20px;padding:0 6px;border-radius:3px;border:1px solid var(--border);
+        background:#fff;font-family:var(--mono);font-size:9px;color:var(--muted-fg)}
+  .chip b{font-weight:400;color:var(--fg);margin-left:4px}
+
+  table.risk{width:100%;max-width:1296px;border-collapse:collapse;background:#fff;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+  table.risk th{height:32px;padding:0 12px;text-align:left;font-size:11px;font-weight:500;color:var(--muted-fg);
+                border-bottom:1px solid var(--border-strong);background:color-mix(in oklab,var(--muted) 55%,#fff)}
+  table.risk td{height:32px;padding:0 12px;font-size:12px;color:var(--ink-88);border-bottom:1px solid var(--border-soft);vertical-align:middle}
+  table.risk tr:last-child td{border-bottom:0}
+  table.risk td:first-child{width:220px;color:var(--fg)}
+
+  .foot{margin-top:72px;padding-top:18px;border-top:1px solid var(--border);font-size:11px;color:var(--muted-fg-3);display:flex;justify-content:space-between}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="doc-head">
+    <div class="doc-no">086 / 03</div>
+    <div>
+      <h1>方案 B：分段 DAG</h1>
+      <p class="lede">节点只执行一次。扇出与扇入之间切成段，段内仍是一条 xan 链，段与段之间物化到临时文件，互不依赖的段并行。</p>
+      <div class="decision"><b>核心取舍</b>：不按单节点拆进程。xan 每步一个进程的启动与 IO 开销会吃掉并行收益，所以执行单位是「段」，不是「节点」。</div>
+      <nav class="nav">
+        <a href="01-audit.html">现状审计 <span>01</span></a>
+        <a href="02-option-a-run-list.html">方案 A 运行清单 <span>02</span></a>
+        <a class="on" href="03-option-b-segment-dag.html">方案 B 分段 DAG <span>03</span></a>
+        <a href="04-option-c-pipeline-jobs.html">方案 C 作业台 <span>04</span></a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- 01 段划分 -->
+  <section>
+    <div class="sec-hd"><span class="sec-no">01</span><h2>怎么切段</h2></div>
+    <p class="sec-note">段的边界只有两种：扇出（一个节点有多条出边）与扇入（一个节点有多条入边）。其余连续的单入单出节点留在同一段里，保持一次链式调用。</p>
+
+    <div class="rules">
+      <div class="rule">
+        <div class="rn">S1</div>
+        <h4>源到第一个扇出点</h4>
+        <p>从输入或入度 0 的节点开始，穿过单入单出节点，直到遇到分叉。整段一次执行。</p>
+      </div>
+      <div class="rule">
+        <div class="rn">S2 / S3</div>
+        <h4>扇出后的每个分支</h4>
+        <p>各自成段，互不依赖，可并行。段内多步仍是一条链，不拆成多次进程调用。</p>
+      </div>
+      <div class="rule">
+        <div class="rn">S4</div>
+        <h4>扇入点到下一个扇出点</h4>
+        <p>多入边节点开启新段。默认按边序拼接输入，并在节点上标「合并 N 路」。</p>
+      </div>
+      <div class="rule">
+        <div class="rn">例外</div>
+        <h4>特殊节点独占一段</h4>
+        <p><code>batch-*</code> 与 <code>chart</code> 由前端执行，必须独占段，暂不参与并行。</p>
+      </div>
+    </div>
+
+    <h3>例子</h3>
+    <div class="timing" style="border:1px solid var(--border);border-radius:9px;background:#fff;max-width:1296px;overflow:hidden;box-shadow:var(--shadow-card)">
+      <div style="display:grid;grid-template-columns:120px minmax(0,1fr);border-bottom:1px solid var(--border-soft)">
+        <div style="height:56px;display:flex;align-items:center;padding:0 16px;border-right:1px solid var(--border-soft);font-family:var(--mono);font-size:10px;color:var(--muted-fg-2)">拓扑</div>
+        <div style="display:flex;align-items:center;gap:8px;padding:0 18px;flex-wrap:wrap">
+          <span class="chip">input</span><span style="font-family:var(--mono);font-size:10px;color:var(--muted-fg-3)">›</span>
+          <span class="chip" style="border-color:color-mix(in oklab,var(--brand) 30%,transparent);color:var(--brand-ink)">S1 filter</span>
+          <span style="font-family:var(--mono);font-size:10px;color:var(--muted-fg-3)">┬</span>
+          <span class="chip" style="border-color:color-mix(in oklab,var(--brand) 30%,transparent);color:var(--brand-ink)">S2 groupby</span>
+          <span class="chip" style="border-color:color-mix(in oklab,var(--brand) 30%,transparent);color:var(--brand-ink)">S3 sort › head</span>
+          <span style="font-family:var(--mono);font-size:10px;color:var(--muted-fg-3)">┴</span>
+          <span class="chip" style="border-color:color-mix(in oklab,var(--brand) 30%,transparent);color:var(--brand-ink)">S4 cat › dedup</span>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:120px minmax(0,1fr)">
+        <div style="height:56px;display:flex;align-items:center;padding:0 16px;border-right:1px solid var(--border-soft);font-family:var(--mono);font-size:10px;color:var(--muted-fg-2)">调度</div>
+        <div style="display:flex;align-items:center;gap:8px;padding:0 18px;flex-wrap:wrap">
+          <span class="chip">S1</span>
+          <span class="chip" style="background:var(--brand-9);border-color:color-mix(in oklab,var(--brand) 24%,transparent);color:var(--brand-ink)">S2 ∥ S3</span>
+          <span class="chip">S4</span>
+          <span style="margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--muted-fg-2)">去重 6 步 · 4 段 · 并行 2</span>
+        </div>
+      </div>
+    </div>
+    <p class="cap">同一张图，今天按路径是 2 条分支、A 与 D 各两次；分段后是 4 段、每个节点一次。</p>
+  </section>
+
+  <!-- 02 运行中的画布 -->
+  <section>
+    <div class="sec-hd"><span class="sec-no">02</span><h2>运行中：段是可见单位</h2></div>
+    <p class="sec-note">段用虚线框圈起来，段号挂在左上角；跨段连线中点挂物化文件牌，表示这里落盘了一次中间结果。并行的两段共享一个竖直括号。</p>
+
+    <div class="figure">
+      <div class="win">
+        <div class="bar">
+          <div class="brand">Easy CSV</div>
+          <div class="menus">
+            <div class="mbtn">文件</div><div class="mbtn">编辑</div><div class="mbtn">查看</div>
+            <div class="mbtn" style="background:color-mix(in oklab,var(--brand) 14%,#fff)">执行</div>
+            <div class="mbtn">工具</div><div class="mbtn">帮助</div>
+          </div>
+          <div class="field-wrap"><div class="field"><span class="prompt">›</span><span class="ph">搜索命令、步骤或文件</span><kbd>Ctrl F</kbd></div></div>
+          <div class="icons">
+            <div class="icon-btn on"><svg class="i" viewBox="0 0 24 24"><path d="M4 7h16M4 12h10M4 17h7"/></svg></div>
+            <div class="icon-btn"><svg class="i" viewBox="0 0 24 24"><path d="M4 5h16v12H4z"/><path d="M8 21h8M12 17v4"/></svg></div>
+          </div>
+          <div class="wctl"><div class="wbtn">—</div><div class="wbtn">□</div><div class="wbtn">×</div></div>
+        </div>
+
+        <div class="tabstrip">
+          <div class="tab on">销售清洗 <span class="badge">运行中</span><span class="x">×</span></div>
+          <div class="tab">订单聚合 <span class="x">×</span></div>
+          <div class="tab" style="color:var(--muted-fg-3)">＋</div>
+        </div>
+
+        <div class="canvas">
+          <div style="position:absolute;left:0;right:0;top:0;height:2px;background:var(--border-soft)">
+            <span style="position:absolute;inset:0 46% 0 0;background:var(--brand);display:block"></span>
+          </div>
+
+          <svg class="edges" viewBox="0 0 1296 430" preserveAspectRatio="none">
+            <path d="M346 156 C 364 156 364 168 380 168"/>
+            <path class="seg" d="M580 168 C 598 168 598 74 612 74"/>
+            <path class="seg" d="M580 168 C 598 168 598 210 612 210"/>
+            <path class="seg" d="M712 210 L 712 292"/>
+            <path class="seg" d="M812 74 C 834 74 846 120 862 150"/>
+            <path class="flow" d="M812 322 C 834 322 846 224 862 194"/>
+          </svg>
+
+          <!-- 分段框 -->
+          <div class="segbox" style="left:368px;top:126px;width:224px;height:84px"><span class="sl">S1</span></div>
+          <div class="segbox" style="left:600px;top:34px;width:224px;height:80px"><span class="sl">S2</span></div>
+          <div class="segbox" style="left:600px;top:170px;width:224px;height:194px"><span class="sl">S3</span></div>
+          <div class="segbox" style="left:862px;top:110px;width:224px;height:280px"><span class="sl">S4</span></div>
+          <div class="parband" style="left:584px;top:28px;height:344px"><span class="pl">S2 ∥ S3</span></div>
+
+          <!-- 输入 -->
+          <div class="inputnode" style="left:16px;top:88px">
+            <div class="ih"><svg class="i i12" viewBox="0 0 24 24"><path d="M4 4h16v16H4z"/><path d="M4 9h16M9 9v11"/></svg>sales_2026.csv<span class="m">4 行 × 4 列</span></div>
+            <table>
+              <colgroup><col style="width:30%"><col style="width:24%"><col style="width:20%"><col style="width:26%"></colgroup>
+              <tr><th>日期</th><th>地区</th><th>品类</th><th style="text-align:right">金额</th></tr>
+              <tr><td>2026-01-04</td><td>华东</td><td>办公</td><td class="num">12,480</td></tr>
+              <tr><td>2026-01-04</td><td>华南</td><td>耗材</td><td class="num">3,260</td></tr>
+              <tr><td>2026-01-05</td><td>华东</td><td>办公</td><td class="num">8,940</td></tr>
+              <tr><td>2026-01-05</td><td>华北</td><td>设备</td><td class="num">21,700</td></tr>
+            </table>
+            <div class="if">sales_2026.csv · 4 行 × 4 列</div>
+          </div>
+
+          <!-- S1 -->
+          <div class="snode done" style="left:380px;top:140px">
+            <div class="sh"><span class="idx">01</span><span class="nm">filter</span><span class="tag">S1</span></div>
+            <div class="sb"><span class="p">region = 华东</span></div>
+          </div>
+
+          <!-- S2 -->
+          <div class="snode done" style="left:612px;top:44px">
+            <div class="sh"><span class="idx">02</span><span class="nm">groupby</span><span class="tag">S2</span></div>
+            <div class="sb"><span class="p">by=品类</span><span class="p">sum(金额)</span></div>
+          </div>
+
+          <!-- S3 -->
+          <div class="snode running" style="left:612px;top:178px">
+            <div class="sh"><span class="idx">03</span><span class="nm">sort</span><span class="tag">S3</span></div>
+            <div class="sb"><span class="p">-k 金额</span></div>
+            <div class="cur">运行中 · 0:09</div>
+          </div>
+          <div class="snode dim" style="left:612px;top:276px">
+            <div class="sh"><span class="idx">04</span><span class="nm">head</span><span class="tag">S3</span></div>
+            <div class="sb"><span class="p">20</span></div>
+          </div>
+
+          <!-- S4 -->
+          <div class="snode dim" style="left:874px;top:120px">
+            <div class="sh"><span class="idx">05</span><span class="nm">cat rows</span><span class="tag">S4</span></div>
+            <div class="sb"><span class="p">--union</span></div>
+            <div class="merge">
+              <svg class="i" viewBox="0 0 24 24" style="width:10px;height:10px"><path d="M6 4v8a4 4 0 0 0 4 4h8"/><path d="M6 20v-8a4 4 0 0 1 4-4h8"/></svg>
+              合并 2 路
+            </div>
+          </div>
+          <div class="snode dim" style="left:874px;top:246px">
+            <div class="sh"><span class="idx">06</span><span class="nm">dedup</span><span class="tag">S4</span></div>
+            <div class="sb"><span class="p">category</span></div>
+          </div>
+
+          <!-- 物化文件牌 -->
+          <div class="filec done" style="left:502px;top:232px">
+            <svg class="i" viewBox="0 0 24 24" style="width:10px;height:10px"><path d="M6 2h8l4 4v16H6z"/><path d="M14 2v4h4"/></svg>
+            S1.csv
+          </div>
+          <div class="filec done" style="left:812px;top:102px">
+            <svg class="i" viewBox="0 0 24 24" style="width:10px;height:10px"><path d="M6 2h8l4 4v16H6z"/><path d="M14 2v4h4"/></svg>
+            S2.csv
+          </div>
+          <div class="filec live" style="left:812px;top:254px">
+            <svg class="i" viewBox="0 0 24 24" style="width:10px;height:10px"><path d="M12 3v12M8 11l4 4 4-4"/><path d="M4 21h16"/></svg>
+            S3.csv
+          </div>
+
+          <div style="position:absolute;left:16px;top:14px;font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-3)">
+            S1 完成 · S2 完成 · S3 运行中 · S4 未开始
+          </div>
+          <div style="position:absolute;right:16px;top:14px;display:flex;align-items:center;gap:6px;font-size:9.5px;color:var(--muted-fg-2)">
+            <svg class="i" viewBox="0 0 24 24" style="width:11px;height:11px"><path d="M6 2h8l4 4v16H6z"/><path d="M14 2v4h4"/></svg>
+            物化文件 · run 结束清理
+          </div>
+        </div>
+
+        <div class="dock">
+          <div class="dock-head">
+            <div class="dock-tabs">
+              <div class="dtab">日志 <span class="cnt">52</span></div>
+              <div class="dtab on">运行 <span class="cnt">4</span><span class="dot live"></span></div>
+              <div class="dtab">结果 <span class="cnt">3 行</span></div>
+            </div>
+            <span class="vrule"></span>
+            <div class="runhead" style="border:0;height:auto;padding:0;flex:1">
+              <div class="sum">
+                <span class="g"><span class="lamp" style="background:var(--brand)"></span><b>1</b> 运行中</span>
+                <span class="g"><span class="lamp" style="background:var(--success)"></span><b>2</b> 完成</span>
+                <span class="g"><span class="lamp" style="border:1px solid var(--border-strong)"></span><b>1</b> 未开始</span>
+              </div>
+              <div class="sp"></div>
+              <span class="of">去重 6 步 · 4 段 · 并行 2</span>
+            </div>
+          </div>
+          <div class="runlist">
+            <div class="runrow">
+              <span class="n">S1</span>
+              <span class="chain"><span class="step">filter</span></span>
+              <span class="st"><span class="lamp ok"></span>完成</span>
+              <span class="cur">—</span>
+              <span class="time">1.2 s</span>
+              <span class="acts"><span class="m">S1.csv</span></span>
+            </div>
+            <div class="runrow" style="background:color-mix(in oklab,var(--brand) 2.5%,#fff)">
+              <span class="n">S2</span>
+              <span class="chain"><span class="step">groupby</span></span>
+              <span class="st"><span class="lamp ok"></span>完成</span>
+              <span class="cur">—</span>
+              <span class="time">0.8 s</span>
+              <span class="acts"><span class="m">S2.csv</span></span>
+            </div>
+            <div class="runrow" style="background:color-mix(in oklab,var(--brand) 2.5%,#fff)">
+              <span class="n">S3</span>
+              <span class="chain"><span class="step">sort</span><span class="arr">›</span><span class="step">head</span></span>
+              <span class="st"><span class="lamp run"></span>运行中</span>
+              <span class="cur">sort</span>
+              <span class="time">0:09</span>
+              <span class="acts"><span style="color:var(--danger)">取消</span></span>
+            </div>
+            <div class="runrow">
+              <span class="n">S4</span>
+              <span class="chain"><span class="step">cat rows</span><span class="arr">›</span><span class="step">dedup</span></span>
+              <span class="st"><span class="lamp wait"></span>未开始</span>
+              <span class="cur">—</span>
+              <span class="time">—</span>
+              <span class="acts"><span class="m">—</span></span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="cap"><b>段框</b>用 1px 虚线 + 9px 段号；<b>S2 ∥ S3</b> 的竖直括号表示两段同时在跑。<b>文件牌</b>只出现在跨段连线，标出中间结果落盘的位置；段内连线不加任何装饰。</p>
+    </div>
+  </section>
+
+  <!-- 03 多入边与输出 -->
+  <section>
+    <div class="sec-hd"><span class="sec-no">03</span><h2>两个必须拍板的语义</h2></div>
+    <p class="sec-note">分段本身不改数据含义；真正会改变结果的是多入边和同名输出。这两件事必须在实施前定下来。</p>
+
+    <div class="pair">
+      <div class="panel">
+        <div class="pn">语义 01</div>
+        <h4>多入边：默认按边序拼接</h4>
+        <p>今天菱形图的 D 会被执行两次，每次只吃一条前驱。分段后 D 只执行一次，必须决定两条输入怎么合并。第一版建议等价 <code>cat rows</code>，并在节点上明确标出「合并 2 路」，日志写清顺序。</p>
+        <div class="demo">
+          <div class="mergecard">
+            <div class="mh">
+              <span class="idx" style="display:grid;place-items:center;min-width:19px;height:15px;padding:0 4px;border-radius:3px;font-family:var(--mono);font-size:8.5px;color:var(--muted-fg-2);background:var(--muted)">05</span>
+              cat rows
+              <span class="badge">
+                <svg class="i" viewBox="0 0 24 24" style="width:9px;height:9px"><path d="M6 4v8a4 4 0 0 0 4 4h8"/><path d="M6 20v-8a4 4 0 0 1 4-4h8"/></svg>
+                合并 2 路
+              </span>
+            </div>
+            <div class="mb">输入顺序：S2.csv → S3.csv<br>等价 xan cat rows S2.csv S3.csv</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="pn">语义 02</div>
+        <h4>同名输出：要求显式命名</h4>
+        <p>多个终端段写同一路径时，计划页不只警告，而是提供占位符。路径里写 <code>{segment}</code>，落盘时替换成段号；不写就要求改路径才能开始。</p>
+        <div class="demo">
+          <div class="pathdemo">
+            <div class="pathfield">out_<span style="color:var(--brand)">{segment}</span>.csv<span class="cursor"></span></div>
+            <div class="chips">
+              <span class="chip">S2 <b>out_S2.csv</b></span>
+              <span class="chip">S3 <b>out_S3.csv</b></span>
+              <span class="chip">S4 <b>out_S4.csv</b></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 04 改动面 -->
+  <section>
+    <div class="sec-hd"><span class="sec-no">04</span><h2>改动面与风险</h2></div>
+    <p class="sec-note">B 不能一次性全上。建议先做「共享段只跑一次」，稳定后再开并行；多入边语义再往后放一版。</p>
+
+    <table class="risk">
+      <thead><tr><th>项</th><th>内容</th><th>风险</th></tr></thead>
+      <tbody>
+        <tr><td>段划分</td><td>新增纯函数 <code>buildSegments(steps, edges)</code>：拓扑排序、扇出/扇入边界、环检测、孤立节点、batch/chart 强制独占段。</td><td>中；边界用例多，需覆盖 6 类图</td></tr>
+        <tr><td>后端物化</td><td><code>execute_xan_pipeline</code> 增 <code>outputFile</code>（或 <code>materialize</code>）；复用 <code>pipeline_seq</code> 的临时文件交接；临时目录 RAII 清理。</td><td>中；大文件多段物化会增加总 IO</td></tr>
+        <tr><td>调度</td><td>Kahn 拓扑 + 受限并发；失败段的全部下游标 skipped；取消时杀掉在跑段并清队列。</td><td>中；并发日志交错</td></tr>
+        <tr><td>多入边</td><td>第一版按边序拼接 + 「合并 N 路」徽标；<code>{{input:N}}</code> 留给下一版。</td><td>高；会改变现有菱形图的结果</td></tr>
+        <tr><td>输出</td><td><code>{segment}</code> 占位符；冲突时计划页阻止开始。</td><td>低</td></tr>
+        <tr><td>回归红线</td><td>单链管道逐项一致；旧 <code>.xanflow</code> 可执行；duckdb 混合链沿用 024 的交接规则。</td><td>必须</td></tr>
+      </tbody>
+    </table>
+
+    <h3>建议的上线顺序</h3>
+    <p style="font-size:12.5px">B1 段划分 + 顺序调度（不改并行、不改多入边，只消除重复前缀）→ B2 段级并行 + 失败策略 → B3 <code>{segment}</code> 输出 → B4 多入边 <code>{{input:N}}</code>。B1 就能拿掉最大的浪费，且结果与今天最接近。</p>
+  </section>
+
+  <div class="foot">
+    <span>Easy CSV · 设计原型 086-03</span>
+    <span>独立 HTML，仅用于评审</span>
+  </div>
+</div>
+</body>
+</html>

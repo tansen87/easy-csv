@@ -12,6 +12,69 @@ import type { PipelineEdge, PipelineStep } from "@/types/xan";
  *   "has a dependency"; otherwise in the mixed graph (table-node→S1 plus an
  *   isolated S2) S1 would be silently skipped.
  */
+export interface RunPlan {
+  /** All executable branches, in plan order. */
+  branches: PipelineStep[][];
+  /** Branch indexes the user picked, in plan order (defaults to all). */
+  selectedIndexes: number[];
+  /** Step instances across selected branches. */
+  totalStepCount: number;
+  /** Distinct step ids across selected branches. */
+  uniqueStepIds: string[];
+  /** Steps that appear in more than one selected branch. */
+  repeatedStepIds: string[];
+}
+
+/**
+ * Branch plan plus the selection subset (design 086).
+ *
+ * `buildExecutionBranches` answers "which paths exist"; this answers "which of
+ * them will run, and how much work is that". Unknown indexes are dropped, and
+ * the result keeps plan order so the menu and the run panel agree.
+ */
+export function buildRunPlan(
+  steps: PipelineStep[],
+  edges: PipelineEdge[],
+  selectedIndexes?: number[],
+): RunPlan {
+  const branches = buildExecutionBranches(steps, edges);
+  const selected = Array.from(
+    new Set(
+      selectedIndexes === undefined
+        ? branches.map((_, index) => index)
+        : selectedIndexes.filter(
+            (index) =>
+              Number.isInteger(index) &&
+              index >= 0 &&
+              index < branches.length,
+          ),
+    ),
+  ).sort((a, b) => a - b);
+  const selectedSet = new Set(selected);
+  const selectedBranches = branches.filter((_, index) =>
+    selectedSet.has(index),
+  );
+
+  const counts = new Map<string, number>();
+  let totalStepCount = 0;
+  selectedBranches.forEach((branch) => {
+    branch.forEach((step) => {
+      totalStepCount += 1;
+      counts.set(step.id, (counts.get(step.id) ?? 0) + 1);
+    });
+  });
+
+  return {
+    branches,
+    selectedIndexes: selected,
+    totalStepCount,
+    uniqueStepIds: Array.from(counts.keys()),
+    repeatedStepIds: Array.from(counts.entries())
+      .filter(([, count]) => count > 1)
+      .map(([id]) => id),
+  };
+}
+
 export function buildExecutionBranches(
   steps: PipelineStep[],
   edges: PipelineEdge[],

@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/Card";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { useLanguage } from "@/i18n";
 import { PipelineStep } from "@/types/xan";
+import type { StepExecutionStatus } from "@/types/execution";
 import { CutPartInfo } from "@/modules/pipeline/lib/cutGeometry";
 
 export interface PipelineStepNodeData {
@@ -29,6 +30,8 @@ export interface PipelineStepNodeData {
   isHighlighted?: boolean;
   /** Canvas lock: hides the hover action strip and rename input. */
   locked?: boolean;
+  /** Current run's state for this step (design 086). Not persisted. */
+  executionState?: StepExecutionStatus;
 }
 
 /** 1px cut seam, clipped with the card (or its split halves). */
@@ -181,8 +184,31 @@ export function PipelineStepNode({
         className="!w-3 !h-3 !bg-primary/50 !border-2 !border-background opacity-0"
         style={{ opacity: 0, pointerEvents: "none" }}
       />
+      {data.executionState === "running" && (
+        <span
+          aria-hidden="true"
+          className="absolute left-0 top-0 bottom-0 w-0.5 rounded-l bg-primary"
+        />
+      )}
       <div className="p-3">
         <div className="flex items-center gap-2 w-full">
+          {data.executionState &&
+            data.executionState !== "pending" &&
+            data.executionState !== "skipped" && (
+            <span
+              aria-hidden="true"
+              title={data.executionState}
+              className={`h-1.5 w-1.5 flex-none rounded-full ${
+                data.executionState === "running"
+                  ? "bg-primary ring-[3px] ring-primary/10"
+                  : data.executionState === "done"
+                    ? "bg-success"
+                    : data.executionState === "error"
+                      ? "bg-danger"
+                      : "bg-muted-foreground/40"
+              }`}
+            />
+          )}
           {isEditing && !data.locked ? (
             <div className="flex items-center gap-1 w-full">
               <input
@@ -359,7 +385,9 @@ export function PipelineStepNode({
         ? "bg-paper border-danger/70 shadow-md ring-2 ring-danger/30"
         : "bg-paper border-[var(--canvas-ink)] shadow-sm ring-2 ring-[var(--canvas-ink-soft)]"
       : "bg-card/95 hover:bg-accent/30 border-border/60 hover:border-primary/30"
-  } ${data.step.error ? "border-danger/70 shadow-md ring-2 ring-danger/30" : ""} ${data.isHighlighted ? "ring-2 ring-primary ring-offset-2 animate-pulse-once" : ""}`;
+  } ${data.step.error ? "border-danger/70 shadow-md ring-2 ring-danger/30" : ""} ${
+    data.executionState === "running" ? "border-primary/45" : ""
+  } ${data.executionState === "skipped" ? "opacity-55" : ""} ${data.isHighlighted ? "ring-2 ring-primary ring-offset-2 animate-pulse-once" : ""}`;
 
   // If there is a cutting section, render two cutting fragments
   if (data.cutParts && data.cutParts.length > 0) {

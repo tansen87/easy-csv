@@ -1,0 +1,957 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>原型 086-02 · 方案 A 运行清单</title>
+<style>
+  :root{
+    --font:"Inter","Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Consolas,monospace;
+
+    --bg:#fff;
+    --fg:oklch(0.145 0 0);
+    --ink-88:color-mix(in oklab, oklch(0.145 0 0) 88%, #fff);
+    --ink-4:color-mix(in oklab, oklch(0.145 0 0) 4%, transparent);
+    --ink-6:color-mix(in oklab, oklch(0.145 0 0) 6%, transparent);
+    --muted:oklch(0.97 0 0);
+    --muted-fg:oklch(0.556 0 0);
+    --muted-fg-2:oklch(0.66 0 0);
+    --muted-fg-3:oklch(0.76 0 0);
+    --border:oklch(0.922 0 0);
+    --border-soft:oklch(0.2 0.01 80 / 8%);
+    --border-strong:oklch(0.2 0.01 80 / 22%);
+
+    --brand:oklch(0.42 0.055 250);
+    --brand-ink:oklch(0.35 0.05 250);
+    --brand-6:color-mix(in oklab, oklch(0.42 0.055 250) 6%, transparent);
+    --brand-9:color-mix(in oklab, oklch(0.42 0.055 250) 9%, transparent);
+    --brand-12:color-mix(in oklab, oklch(0.42 0.055 250) 12%, transparent);
+    --focus:color-mix(in oklab, oklch(0.42 0.055 250) 40%, transparent);
+    --chrome:color-mix(in oklab, oklch(0.42 0.055 250) 12%, #fff);
+    --chrome-border:color-mix(in oklab, oklch(0.42 0.055 250) 30%, transparent);
+
+    --stage:oklch(0.975 0.004 85);
+    --paper:oklch(0.995 0.004 85);
+    --canvas-dot:oklch(0.2 0.01 80 / 11%);
+    --canvas-line:oklch(0.2 0.01 80 / 30%);
+    --shadow-card:0 1px 2px oklch(0.2 0.02 80 / 5%);
+    --shadow-win:0 24px 64px -34px oklch(0.2 0.02 80 / 34%),0 2px 6px oklch(0.2 0.02 80 / 6%);
+    --shadow-up:0 -12px 28px -22px oklch(0.2 0.02 80 / 40%);
+
+    --success:oklch(0.52 0.09 150);
+    --success-soft:color-mix(in oklab, oklch(0.52 0.09 150) 10%, transparent);
+    --danger:oklch(0.53 0.13 27);
+    --danger-soft:color-mix(in oklab, oklch(0.53 0.13 27) 8%, transparent);
+    --warning:oklch(0.55 0.1 72);
+    --warning-soft:color-mix(in oklab, oklch(0.55 0.1 72) 10%, transparent);
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--stage)}
+  body{font-family:var(--font);color:var(--fg);font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased}
+  .page{max-width:1360px;margin:0 auto;padding:56px 32px 104px}
+
+  .doc-head{display:grid;grid-template-columns:76px minmax(0,1fr);gap:24px;padding-bottom:26px;border-bottom:1px solid var(--border-strong)}
+  .doc-no{font-family:var(--mono);font-size:12px;color:var(--muted-fg);padding-top:6px;letter-spacing:.02em}
+  h1{margin:0 0 8px;font-size:27px;font-weight:500;line-height:1.28;letter-spacing:-.01em}
+  .lede{margin:0;max-width:840px;font-size:13.5px;color:var(--muted-fg)}
+  .decision{display:flex;gap:8px;margin:16px 0 0;padding:8px 12px;border-left:2px solid var(--brand);
+            background:var(--brand-6);font-size:12.5px;max-width:880px}
+  .decision b{font-weight:500}
+
+  .nav{display:flex;gap:4px;margin-top:18px;flex-wrap:wrap}
+  .nav a{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 10px;border:1px solid var(--border);
+         border-radius:6px;font-size:11.5px;color:var(--muted-fg);text-decoration:none;background:#fff}
+  .nav a.on{border-color:var(--border-strong);background:var(--brand-9);color:var(--brand-ink)}
+  .nav a span{font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-3)}
+
+  section{margin-top:64px}
+  .sec-hd{display:flex;align-items:baseline;gap:10px;margin-bottom:6px}
+  .sec-no{font-family:var(--mono);font-size:11px;color:var(--brand)}
+  h2{margin:0;font-size:18px;font-weight:500;letter-spacing:-.005em}
+  .sec-note{margin:0 0 22px;max-width:860px;font-size:13px;color:var(--muted-fg)}
+  h3{margin:34px 0 12px;font-size:13.5px;font-weight:500}
+  p{margin:0 0 12px;font-size:13px;color:var(--muted-fg);max-width:860px}
+  code{font-family:var(--mono);font-size:11px;color:var(--fg);background:var(--muted);border-radius:3px;padding:1px 4px}
+
+  kbd{display:inline-flex;align-items:center;justify-content:center;height:16px;min-width:16px;padding:0 4px;
+      border:1px solid var(--border);border-radius:3px;font-family:var(--mono);font-size:9.5px;line-height:1;color:var(--muted-fg-2)}
+  .i{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+  .i12{width:12px;height:12px}.i14{width:14px;height:14px}
+
+  .figure{position:relative;width:max-content;max-width:100%}
+  .cap{margin:12px 0 0;font-size:11.5px;color:var(--muted-fg-2);max-width:1060px}
+  .cap b{font-weight:500;color:var(--fg)}
+
+  /* 窗口 */
+  .win{position:relative;width:1280px;display:flex;flex-direction:column;background:var(--bg);
+       border:1px solid var(--border);border-radius:10px;overflow:hidden;box-shadow:var(--shadow-win)}
+  .bar{position:relative;flex:none;display:flex;align-items:center;height:36px;padding-left:16px;
+       background:var(--chrome);box-shadow:inset 0 -1px 0 var(--chrome-border)}
+  .brand{flex:none;padding-right:12px;font-size:12.5px;font-weight:500;line-height:1;color:var(--fg)}
+  .menus{display:flex;align-items:center;flex:none}
+  .mbtn{height:26px;padding:0 12px;border-radius:6px;font-size:12px;font-weight:500;line-height:26px;color:var(--brand-ink)}
+  .field-wrap{position:absolute;left:50%;top:5px;transform:translateX(-50%);width:400px}
+  .field{display:grid;grid-template-columns:12px minmax(0,1fr) auto;align-items:center;gap:8px;height:26px;
+         padding:0 6px 0 10px;border:1px solid var(--border);border-radius:7px;background:var(--bg);color:var(--muted-fg-2)}
+  .field .prompt{font-family:var(--mono);font-size:13px;color:var(--brand);text-align:center;transform:translateY(-1px)}
+  .field .ph{font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .icons{margin-left:auto;display:flex;align-items:center;gap:2px;flex:none}
+  .icon-btn{display:grid;place-items:center;width:28px;height:28px;border-radius:6px;color:var(--brand-ink)}
+  .icon-btn.on{background:var(--brand-12)}
+  .wctl{display:flex;margin-left:10px}
+  .wbtn{display:grid;place-items:center;width:46px;height:36px;color:var(--muted-fg);font-size:12px}
+  .tabstrip{flex:none;display:flex;align-items:center;gap:4px;height:34px;padding:0 10px;border-bottom:1px solid var(--border-soft)}
+  .tab{display:flex;align-items:center;gap:7px;height:26px;padding:0 8px 0 10px;border-radius:6px;font-size:11.5px;color:var(--muted-fg)}
+  .tab.on{background:var(--muted);color:var(--fg);font-weight:500}
+  .tab .badge{font-size:9px;color:var(--brand);background:var(--brand-9);border-radius:3px;padding:0 4px;line-height:14px}
+  .tab .x{color:var(--muted-fg-3)}
+
+  .canvas{position:relative;flex:none;height:404px;overflow:hidden;background-color:var(--bg);
+          background-image:radial-gradient(var(--canvas-dot) 1px,transparent 1px);background-size:22px 22px}
+  .edges{position:absolute;inset:0;width:100%;height:100%}
+  .edges path{fill:none;stroke:var(--canvas-line);stroke-width:1.25}
+  .rail{position:absolute;left:12px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:2px;
+        padding:3px;border:1px solid var(--border);border-radius:7px;background:var(--card);box-shadow:var(--shadow-card)}
+  .rail b{display:grid;place-items:center;width:24px;height:24px;border-radius:5px;color:var(--muted-fg-2)}
+  .rail .on{background:var(--brand-9);color:var(--brand-ink)}
+
+  .inputnode{position:absolute;width:420px;background:var(--paper);border:1px solid var(--border);border-radius:8px;
+             box-shadow:var(--shadow-card);overflow:hidden}
+  .inputnode .ih{display:flex;align-items:center;gap:8px;height:28px;padding:0 10px;border-bottom:1px solid var(--border-soft);
+                 font-family:var(--mono);font-size:10.5px;color:var(--fg)}
+  .inputnode .ih .m{margin-left:auto;font-family:var(--font);font-size:9.5px;color:var(--muted-fg-2)}
+  .inputnode table{width:100%;border-collapse:collapse;table-layout:fixed}
+  .inputnode th{height:22px;padding:0 8px;text-align:left;font-size:9.5px;font-weight:500;color:var(--muted-fg);
+                border-bottom:1px solid var(--border-soft)}
+  .inputnode td{height:21px;padding:0 8px;font-size:9.5px;color:var(--ink-88);border-bottom:1px solid color-mix(in oklab,var(--border) 55%,transparent);
+                white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .inputnode td.num{font-family:var(--mono);text-align:right;font-variant-numeric:tabular-nums}
+  .inputnode .if{display:flex;align-items:center;height:24px;padding:0 10px;border-top:1px solid var(--border-soft);
+                 font-family:var(--mono);font-size:9px;color:var(--muted-fg-2)}
+
+  .snode{position:absolute;width:200px;background:var(--card);border:1px solid var(--border);border-radius:8px;
+         box-shadow:var(--shadow-card);overflow:hidden}
+  .snode .sh{display:flex;align-items:center;gap:8px;padding:9px 11px 7px}
+  .snode .idx{display:grid;place-items:center;min-width:20px;height:16px;padding:0 4px;border-radius:3px;
+              font-family:var(--mono);font-size:9px;color:var(--muted-fg-2);background:var(--muted)}
+  .snode .nm{font-size:12px;font-weight:500;line-height:1.2;color:var(--fg)}
+  .snode .tag{margin-left:auto;font-family:var(--mono);font-size:9px;color:var(--muted-fg-2);
+              border:1px solid var(--border-soft);border-radius:3px;padding:0 4px;line-height:14px}
+  .snode .sb{padding:0 11px 9px;display:flex;flex-wrap:wrap;gap:4px}
+  .snode .p{font-family:var(--mono);font-size:9px;line-height:15px;color:var(--muted-fg);
+            background:var(--muted);border:1px solid var(--border-soft);border-radius:3px;padding:0 4px}
+  .snode .ep{margin:0 9px 8px;padding:3px 6px;border:1px solid color-mix(in oklab,var(--danger) 32%,transparent);
+             border-radius:4px;font-size:9px;line-height:1.45;color:var(--danger);background:var(--danger-soft);overflow-wrap:anywhere}
+  .snode.running{border-color:color-mix(in oklab,var(--brand) 45%,transparent)}
+  .snode.running::before{content:"";position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--brand)}
+  .snode.running .idx{background:var(--brand);color:#fff}
+  .snode.done .idx{background:var(--brand-soft);color:var(--brand-ink)}
+  .snode .rep{display:inline-flex;align-items:center;height:15px;margin:0 9px 8px;padding:0 5px;border-radius:3px;
+              font-family:var(--mono);font-size:8.5px;color:var(--warning);background:var(--warning-soft);
+              border:1px solid color-mix(in oklab,var(--warning) 26%,transparent)}
+  .snode .cur{margin:0 9px 8px;font-family:var(--mono);font-size:9px;color:var(--brand-ink)}
+
+  /* 底部抽屉 */
+  .dock{flex:none;display:flex;flex-direction:column;background:#fff;border-top:1px solid var(--border-strong);box-shadow:var(--shadow-up)}
+  .dock-head{flex:none;display:flex;align-items:center;gap:8px;height:32px;padding:0 8px;border-bottom:1px solid var(--border-soft)}
+  .dock-tabs{display:flex;flex:none;align-items:center;gap:2px}
+  .vrule{flex:none;width:1px;height:12px;background:var(--border-soft)}
+  .dtab{display:flex;align-items:center;gap:7px;height:26px;padding:0 9px;border-radius:6px;font-size:11.5px;color:var(--muted-fg)}
+  .dtab.on{background:color-mix(in oklab,var(--brand) 12%,#fff);color:var(--fg);font-weight:500}
+  .dtab .cnt{font-family:var(--mono);font-size:10px;color:var(--muted-fg-2);font-variant-numeric:tabular-nums}
+  .dtab .dot{width:5px;height:5px;border-radius:50%;background:var(--muted-fg-3)}
+  .dtab .dot.live{background:var(--brand)}
+  .dtab .dot.fail{background:var(--danger)}
+  .dock-body{background:#fff}
+
+  /* 选择页 */
+  .plan{width:680px;margin:0 auto;padding:14px 0 12px}
+  .plan-tools{display:flex;align-items:center;gap:9px;height:22px}
+  .plan-tools .all{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--fg)}
+  .plan-tools .sepv{width:1px;height:11px;background:var(--border-soft)}
+  .plan-tools .sum{font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-2);font-variant-numeric:tabular-nums}
+  .plan-tools .sum b{font-weight:400;color:var(--fg)}
+
+  .prows{margin-top:8px;border:1px solid var(--border-soft);border-radius:7px;overflow:hidden;background:#fff}
+  .prow{display:grid;grid-template-columns:20px 28px minmax(0,1fr) 44px 56px;align-items:center;height:34px;
+        padding:0 12px 0 10px;border-bottom:1px solid var(--border-soft)}
+  .prow:last-child{border-bottom:0}
+  .prow.hover{background:var(--ink-4)}
+  .prow .n{font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-2)}
+  .prow .chain{display:flex;align-items:center;gap:6px;min-width:0}
+  .prow .step{font-size:11.5px;color:var(--fg);white-space:nowrap}
+  .prow .arr{font-size:9px;color:var(--muted-fg-3)}
+  .prow .steps{font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-2);text-align:right}
+  .prow .only{font-size:10px;color:var(--brand-ink);text-align:right;opacity:0;transition:opacity .12s ease}
+  .prow.hover .only{opacity:1}
+  .prow.off .n,.prow.off .step,.prow.off .steps{color:var(--muted-fg-2)}
+  .prow.off .chain{opacity:.72}
+
+  .cb{position:relative;display:grid;place-items:center;width:14px;height:14px;border:1px solid var(--border-strong);
+      border-radius:3px;background:#fff;color:#fff;flex:none}
+  .cb.on{background:var(--brand);border-color:var(--brand)}
+  .cb.on svg{width:9px;height:9px;stroke:#fff;stroke-width:2.4;fill:none;stroke-linecap:round;stroke-linejoin:round}
+  .cb.ind{border-color:var(--brand);background:#fff}
+  .cb.ind::after{content:"";width:8px;height:1.5px;border-radius:1px;background:var(--brand)}
+  .cb.focus{box-shadow:0 0 0 2px var(--focus)}
+
+  .plan-risk{display:flex;align-items:center;gap:6px;height:20px;margin-top:9px;font-size:11px}
+  .plan-risk.warn{color:var(--warning)}
+  .plan-risk.calm{color:var(--muted-fg)}
+  .plan-risk b{font-family:var(--mono);font-weight:400;background:color-mix(in oklab,currentColor 8%,#fff);
+               border:1px solid color-mix(in oklab,currentColor 22%,transparent);border-radius:3px;padding:0 4px;line-height:15px}
+  .plan-foot{display:flex;align-items:center;gap:8px;margin-top:10px}
+  .plan-foot .hint{font-size:10.5px;color:var(--muted-fg-2)}
+  .plan-foot .btns{margin-left:auto;display:flex;align-items:center;gap:8px}
+  .btn{height:26px;padding:0 11px;border-radius:6px;border:1px solid var(--border);background:#fff;font-size:11.5px;line-height:24px;color:var(--fg)}
+  .btn.primary{background:var(--brand);border-color:var(--brand);color:#fff}
+  .btn.disabled{background:var(--muted);border-color:var(--border);color:var(--muted-fg-3)}
+
+  /* 运行清单 */
+  .runhead{display:flex;align-items:center;gap:10px;height:32px;padding:0 14px;border-bottom:1px solid var(--border-soft)}
+  .runhead .sum{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:10px;color:var(--muted-fg-2);font-variant-numeric:tabular-nums}
+  .runhead .sum b{font-weight:400;color:var(--fg)}
+  .runhead .sum .g{display:flex;align-items:center;gap:4px}
+  .runhead .sum .lamp{width:5px;height:5px;border-radius:50%}
+  .runhead .sp{flex:1}
+  .runhead .of{font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-3)}
+  .runlist{background:#fff}
+  .runrow{display:grid;grid-template-columns:34px minmax(0,1fr) 82px 112px 56px 108px;align-items:center;height:34px;
+          padding:0 14px;border-bottom:1px solid var(--border-soft)}
+  .runrow:last-child{border-bottom:0}
+  .runrow .n{font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-2)}
+  .runrow .chain{display:flex;align-items:center;gap:6px;min-width:0}
+  .runrow .step{font-size:11.5px;color:var(--fg);white-space:nowrap}
+  .runrow .arr{font-size:9px;color:var(--muted-fg-3)}
+  .runrow .st{display:flex;align-items:center;gap:6px;font-size:10.5px;color:var(--muted-fg)}
+  .runrow .lamp{width:6px;height:6px;border-radius:50%;flex:none}
+  .runrow .lamp.run{background:var(--brand);box-shadow:0 0 0 3px var(--brand-9)}
+  .runrow .lamp.ok{background:var(--success)}
+  .runrow .lamp.err{background:var(--danger)}
+  .runrow .lamp.wait{border:1px solid var(--border-strong);background:transparent}
+  .runrow .cur{font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .runrow .time{font-family:var(--mono);font-size:10px;color:var(--muted-fg-2);text-align:right;font-variant-numeric:tabular-nums}
+  .runrow .acts{display:flex;justify-content:flex-end;gap:6px;font-size:10px;color:var(--brand-ink)}
+  .runrow .acts .m{color:var(--muted-fg-3)}
+  .runrow .acts .d{color:var(--danger)}
+  .runrow.failed{background:color-mix(in oklab,var(--danger) 3%,#fff)}
+  .runrow.queued{background:color-mix(in oklab,var(--muted) 40%,#fff)}
+  .runfoot{display:flex;align-items:center;gap:7px;height:30px;padding:0 14px;border-top:1px solid var(--border-soft);
+           font-size:10.5px;color:var(--muted-fg-2);background:color-mix(in oklab,var(--muted) 28%,#fff)}
+  .runfoot b{font-family:var(--mono);font-weight:400;color:var(--muted-fg)}
+  .runfoot .go{margin-left:auto;font-size:10.5px;font-weight:500;color:var(--brand-ink)}
+
+  /* 结果页签 */
+  .resmeta{display:flex;align-items:center;gap:9px;flex:1;min-width:0;padding-left:2px}
+  .resmeta .branch{display:flex;align-items:center;gap:5px;height:18px;padding:0 5px;border-radius:3px;background:var(--brand-9);color:var(--brand-ink);font-size:10px;font-weight:500}
+  .resmeta .path{display:flex;align-items:center;gap:5px;min-width:0}
+  .resmeta .path .no{font-family:var(--mono);font-size:9px;color:var(--muted-fg-2);background:var(--muted);border-radius:3px;padding:0 3px;line-height:14px}
+  .resmeta .path .nm{font-size:11.5px;color:var(--fg);white-space:nowrap}
+  .resmeta .sep{font-size:9px;color:var(--muted-fg-3)}
+  .resmeta .m{margin-left:auto;font-family:var(--mono);font-size:10.5px;color:var(--muted-fg-2);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .resmeta .t{font-family:var(--mono);font-size:10px;color:var(--muted-fg-3);white-space:nowrap}
+  .docktable{padding:0 14px 10px}
+  .docktable table{width:100%;border-collapse:collapse;table-layout:fixed}
+  .docktable th{height:28px;text-align:left;font-size:10.5px;font-weight:500;color:var(--muted-fg);border-bottom:1px solid var(--border-strong)}
+  .docktable td{height:26px;font-size:12px;color:var(--ink-88);border-bottom:1px solid var(--border-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .docktable td.num,.docktable th.num{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+  /* 状态细节 */
+  .statecards{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;max-width:1296px}
+  .statecard{border:1px solid var(--border);border-radius:9px;background:#fff;padding:14px;box-shadow:var(--shadow-card)}
+  .statecard .sh{display:flex;align-items:baseline;gap:7px;margin-bottom:8px}
+  .statecard .sn{font-family:var(--mono);font-size:9.5px;color:var(--brand)}
+  .statecard .sh b{font-size:12.5px;font-weight:500}
+  .statecard .count{margin-left:auto;font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-2);font-variant-numeric:tabular-nums}
+  .statecard .lines{display:flex;flex-direction:column;gap:1px;margin-bottom:9px}
+  .sline{display:grid;grid-template-columns:14px 18px minmax(0,1fr) 30px;align-items:center;gap:6px;height:22px;font-size:10px;color:var(--fg)}
+  .sline .n{font-family:var(--mono);font-size:8.5px;color:var(--muted-fg-2)}
+  .sline .st{font-family:var(--mono);font-size:8.5px;color:var(--muted-fg-2);text-align:right}
+  .sline.off{color:var(--muted-fg-2)}
+  .sline.off .n,.sline.off .st{color:var(--muted-fg-3)}
+  .statecard .sum{font-family:var(--mono);font-size:9px;color:var(--muted-fg-2);margin-bottom:10px;font-variant-numeric:tabular-nums}
+  .statecard .mini{display:flex;align-items:center;justify-content:center;height:26px;border-radius:5px;
+                   background:var(--brand);color:#fff;font-size:10.5px;font-weight:500}
+  .statecard .mini.disabled{background:var(--muted);color:var(--muted-fg-3);font-weight:400}
+  .statecard .warn{margin-top:7px;font-size:9.5px;line-height:1.45;color:var(--muted-fg-2)}
+  .statecard .warn.amber{color:var(--warning)}
+
+  /* 规格 */
+  .spec{display:grid;grid-template-columns:360px minmax(0,1fr);gap:40px;max-width:1180px;align-items:start}
+  .anatomy{border:1px solid var(--border);border-radius:8px;background:#fff;overflow:hidden;box-shadow:var(--shadow-card)}
+  .anatomy .arow{display:grid;grid-template-columns:20px 28px minmax(0,1fr) 44px 56px;align-items:center;height:34px;padding:0 12px 0 10px;position:relative}
+  .anatomy .arow + .arow{border-top:1px solid var(--border-soft)}
+  .dims{display:flex;gap:10px;margin-top:8px;font-family:var(--mono);font-size:8.5px;color:var(--muted-fg-3)}
+  .dims span{display:flex;align-items:center;gap:3px}
+  .dims i{display:block;width:12px;height:1px;background:var(--border-strong)}
+  .annot{border-left:2px solid var(--border-soft);padding-left:18px}
+  .annot ul{margin:0;padding:0;list-style:none}
+  .annot li{font-size:12px;color:var(--muted-fg);margin-bottom:9px;line-height:1.6}
+  .annot b{font-weight:500;color:var(--fg)}
+  .annot code{font-family:var(--mono);font-size:10px}
+
+  .state-demo{display:flex;gap:28px;align-items:flex-start;max-width:1180px}
+  .demo-block{display:flex;flex-direction:column;gap:6px}
+  .demo-block .dl{font-family:var(--mono);font-size:9px;color:var(--muted-fg-3)}
+  .demo-line{display:flex;align-items:center;gap:8px;font-size:10.5px;color:var(--muted-fg)}
+  .btn-samples{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+
+  table.states{width:100%;max-width:1180px;border-collapse:collapse;background:#fff;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+  table.states th{height:32px;padding:0 12px;text-align:left;font-size:11px;font-weight:500;color:var(--muted-fg);
+                  border-bottom:1px solid var(--border-strong);background:color-mix(in oklab,var(--muted) 55%,#fff)}
+  table.states td{height:32px;padding:0 12px;font-size:12px;color:var(--ink-88);border-bottom:1px solid var(--border-soft)}
+  table.states tr:last-child td{border-bottom:0}
+  table.states td:first-child{font-family:var(--mono);font-size:10.5px;color:var(--muted-fg);width:170px}
+  .swatch{display:inline-block;width:6px;height:6px;border-radius:50%;vertical-align:middle;margin-right:6px}
+
+  table.keys{width:100%;max-width:1180px;border-collapse:collapse;background:#fff;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+  table.keys th{height:30px;padding:0 12px;text-align:left;font-size:10.5px;font-weight:500;color:var(--muted-fg);
+                border-bottom:1px solid var(--border-strong);background:color-mix(in oklab,var(--muted) 55%,#fff)}
+  table.keys td{height:28px;padding:0 12px;font-size:11.5px;color:var(--ink-88);border-bottom:1px solid var(--border-soft)}
+  table.keys tr:last-child td{border-bottom:0}
+  table.keys td:first-child{font-family:var(--mono);font-size:10px;color:var(--fg);width:190px}
+
+  .foot{margin-top:72px;padding-top:18px;border-top:1px solid var(--border);font-size:11px;color:var(--muted-fg-3);display:flex;justify-content:space-between}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="doc-head">
+    <div class="doc-no">086 / 02</div>
+    <div>
+      <h1>方案 A：先选分支，再运行</h1>
+      <p class="lede">多分支时不再「点一下全跑」。执行前给出选择页：默认全选，可取消任意行，也可只运行其中一条；摘要与覆盖风险随选择实时变化。</p>
+      <div class="decision"><b>三条路径</b>：运行全部 / 勾选其中几条 / 行尾「只运行」某一条。未选中的分支不执行、不产结果、不占并发槽，也不标「已跳过」。</div>
+      <p style="margin:10px 0 0;font-size:12px;color:var(--muted-fg)">P0 把这个选择挂进菜单栏「执行」的两级面板，见 <a href="05-run-menu-branch-picker.html" style="color:var(--brand-ink)">05 菜单入口</a>；本页展示同一套内容的完整尺寸与全部状态。</p>
+      <nav class="nav">
+        <a href="01-audit.html">现状审计 <span>01</span></a>
+        <a class="on" href="02-option-a-run-list.html">方案 A 运行清单 <span>02</span></a>
+        <a href="03-option-b-segment-dag.html">方案 B 分段 DAG <span>03</span></a>
+        <a href="04-option-c-pipeline-jobs.html">方案 C 作业台 <span>04</span></a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- 01 全选 -->
+  <section>
+    <div class="sec-hd"><span class="sec-no">01</span><h2>默认全选：与今天一致，但先看清代价</h2></div>
+    <p class="sec-note">三条分支默认全部勾选。已选计数与覆盖提示按已选分支计算；同名输出会被写三次，提示与分支数在同一视线里。行尾「只运行」在悬停时出现。</p>
+
+    <div class="figure">
+      <div class="win">
+        <div class="bar">
+          <div class="brand">Easy CSV</div>
+          <div class="menus">
+            <div class="mbtn">文件</div><div class="mbtn">编辑</div><div class="mbtn">查看</div>
+            <div class="mbtn" style="background:color-mix(in oklab,var(--brand) 14%,#fff)">执行</div>
+            <div class="mbtn">工具</div><div class="mbtn">帮助</div>
+          </div>
+          <div class="field-wrap"><div class="field"><span class="prompt">›</span><span class="ph">搜索命令、步骤或文件</span><kbd>Ctrl F</kbd></div></div>
+          <div class="icons">
+            <div class="icon-btn on"><svg class="i" viewBox="0 0 24 24"><path d="M4 7h16M4 12h10M4 17h7"/></svg></div>
+            <div class="icon-btn"><svg class="i" viewBox="0 0 24 24"><path d="M4 5h16v12H4z"/><path d="M8 21h8M12 17v4"/></svg></div>
+          </div>
+          <div class="wctl"><div class="wbtn">—</div><div class="wbtn">□</div><div class="wbtn">×</div></div>
+        </div>
+
+        <div class="tabstrip">
+          <div class="tab on">销售清洗 <span class="x">×</span></div>
+          <div class="tab">订单聚合 <span class="x">×</span></div>
+          <div class="tab" style="color:var(--muted-fg-3)">＋</div>
+        </div>
+
+        <div class="canvas">
+          <svg class="edges" viewBox="0 0 1280 404" preserveAspectRatio="none">
+            <path d="M440 166 C 476 166 486 181 520 181"/>
+            <path d="M720 181 C 752 181 770 72 800 72"/>
+            <path d="M720 181 C 752 181 770 202 800 202"/>
+            <path d="M720 181 C 752 181 770 326 800 326"/>
+          </svg>
+          <div class="rail">
+            <b class="on"><svg class="i i14" viewBox="0 0 24 24"><path d="M12 3v12M8 11l4 4 4-4"/><path d="M4 21h16"/></svg></b>
+            <b><svg class="i i14" viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h13"/></svg></b>
+            <b><svg class="i i14" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg></b>
+          </div>
+
+          <div class="inputnode" style="left:20px;top:84px">
+            <div class="ih"><svg class="i i12" viewBox="0 0 24 24"><path d="M4 4h16v16H4z"/><path d="M4 9h16M9 9v11"/></svg>sales_2026.csv<span class="m">4 行 × 4 列</span></div>
+            <table>
+              <colgroup><col style="width:30%"><col style="width:24%"><col style="width:20%"><col style="width:26%"></colgroup>
+              <tr><th>日期</th><th>地区</th><th>品类</th><th style="text-align:right">金额</th></tr>
+              <tr><td>2026-01-04</td><td>华东</td><td>办公</td><td class="num">12,480</td></tr>
+              <tr><td>2026-01-04</td><td>华南</td><td>耗材</td><td class="num">3,260</td></tr>
+              <tr><td>2026-01-05</td><td>华东</td><td>办公</td><td class="num">8,940</td></tr>
+              <tr><td>2026-01-05</td><td>华北</td><td>设备</td><td class="num">21,700</td></tr>
+            </table>
+            <div class="if">sales_2026.csv · 4 行 × 4 列</div>
+          </div>
+
+          <div class="snode" style="left:520px;top:150px">
+            <div class="sh"><span class="idx">01</span><span class="nm">filter</span><span class="tag">A</span></div>
+            <div class="sb"><span class="p">region = 华东</span></div>
+          </div>
+          <div class="snode" style="left:800px;top:40px">
+            <div class="sh"><span class="idx">02</span><span class="nm">groupby</span><span class="tag">B</span></div>
+            <div class="sb"><span class="p">by=品类</span><span class="p">sum(金额)</span></div>
+          </div>
+          <div class="snode" style="left:800px;top:170px">
+            <div class="sh"><span class="idx">03</span><span class="nm">sort</span><span class="tag">C</span></div>
+            <div class="sb"><span class="p">-k 金额</span><span class="p">--numeric</span></div>
+          </div>
+          <div class="snode" style="left:800px;top:294px">
+            <div class="sh"><span class="idx">04</span><span class="nm">dedup</span><span class="tag">D</span></div>
+            <div class="sb"><span class="p">category</span></div>
+          </div>
+
+          <div style="position:absolute;left:20px;top:12px;font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-3)">
+            3 条分支共享 filter · 尚未开始
+          </div>
+        </div>
+
+        <div class="dock">
+          <div class="dock-head">
+            <div class="dock-tabs">
+              <div class="dtab">日志 <span class="cnt">12</span></div>
+              <div class="dtab on">运行 <span class="cnt">3</span></div>
+            </div>
+            <span class="vrule"></span>
+            <div style="flex:1"></div>
+            <div style="display:flex;align-items:center;gap:4px;font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-3)">
+              <svg class="i i12" viewBox="0 0 24 24"><path d="M4 5h16v12H4z"/><path d="M8 21h8M12 17v4"/></svg>
+              out/结果.csv
+            </div>
+          </div>
+          <div class="dock-body">
+            <div class="plan">
+              <div class="plan-tools">
+                <span class="all">
+                  <span class="cb on"><svg viewBox="0 0 12 12"><path d="M2.5 6.2l2.2 2.2 4.8-4.8"/></svg></span>
+                  全选
+                </span>
+                <span class="sepv"></span>
+                <span class="sum">已选 <b>3 / 3</b></span>
+              </div>
+
+              <div class="prows">
+                <div class="prow">
+                  <span class="cb on"><svg viewBox="0 0 12 12"><path d="M2.5 6.2l2.2 2.2 4.8-4.8"/></svg></span>
+                  <span class="n">01</span>
+                  <span class="chain"><span class="step">filter</span><span class="arr">›</span><span class="step">groupby</span></span>
+                  <span class="steps">2 步</span>
+                  <span class="only">只运行</span>
+                </div>
+                <div class="prow hover">
+                  <span class="cb on"><svg viewBox="0 0 12 12"><path d="M2.5 6.2l2.2 2.2 4.8-4.8"/></svg></span>
+                  <span class="n">02</span>
+                  <span class="chain"><span class="step">filter</span><span class="arr">›</span><span class="step">sort</span></span>
+                  <span class="steps">2 步</span>
+                  <span class="only">只运行</span>
+                </div>
+                <div class="prow">
+                  <span class="cb on"><svg viewBox="0 0 12 12"><path d="M2.5 6.2l2.2 2.2 4.8-4.8"/></svg></span>
+                  <span class="n">03</span>
+                  <span class="chain"><span class="step">filter</span><span class="arr">›</span><span class="step">dedup</span></span>
+                  <span class="steps">2 步</span>
+                  <span class="only">只运行</span>
+                </div>
+              </div>
+
+              <div class="plan-risk warn">
+                <span class="swatch" style="background:var(--warning)"></span>
+                输出 <b>out/结果.csv</b> 将被覆盖 3 次，后写覆盖先写
+              </div>
+
+              <div class="plan-foot">
+                <span class="hint">选择要运行的分支</span>
+                <span class="btns"><span class="btn">取消</span><span class="btn primary">运行全部 3 条</span></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="cap"><b>默认全选</b>，与今天的「执行」等价，但把覆盖次数提前说清。<b>「只运行」</b>在行尾，悬停才出现；点它等于只勾这一条并立即开始，不再二次确认。</p>
+    </div>
+  </section>
+
+  <!-- 02 只选一条 -->
+  <section>
+    <div class="sec-hd"><span class="sec-no">02</span><h2>只选一条：摘要与主按钮一起变</h2></div>
+    <p class="sec-note">取消两行后，已选计数、覆盖提示和主按钮同时变化。只写一个文件时，警告降为中性提示，不再是琥珀色。</p>
+
+    <div class="figure">
+      <div class="win">
+        <div class="bar">
+          <div class="brand">Easy CSV</div>
+          <div class="menus">
+            <div class="mbtn">文件</div><div class="mbtn">编辑</div><div class="mbtn">查看</div>
+            <div class="mbtn" style="background:color-mix(in oklab,var(--brand) 14%,#fff)">执行</div>
+            <div class="mbtn">工具</div><div class="mbtn">帮助</div>
+          </div>
+          <div class="field-wrap"><div class="field"><span class="prompt">›</span><span class="ph">搜索命令、步骤或文件</span><kbd>Ctrl F</kbd></div></div>
+          <div class="icons">
+            <div class="icon-btn on"><svg class="i" viewBox="0 0 24 24"><path d="M4 7h16M4 12h10M4 17h7"/></svg></div>
+            <div class="icon-btn"><svg class="i" viewBox="0 0 24 24"><path d="M4 5h16v12H4z"/><path d="M8 21h8M12 17v4"/></svg></div>
+          </div>
+          <div class="wctl"><div class="wbtn">—</div><div class="wbtn">□</div><div class="wbtn">×</div></div>
+        </div>
+
+        <div class="tabstrip">
+          <div class="tab on">销售清洗 <span class="x">×</span></div>
+          <div class="tab">订单聚合 <span class="x">×</span></div>
+          <div class="tab" style="color:var(--muted-fg-3)">＋</div>
+        </div>
+
+        <div class="canvas">
+          <svg class="edges" viewBox="0 0 1280 404" preserveAspectRatio="none">
+            <path d="M440 166 C 476 166 486 181 520 181"/>
+            <path d="M720 181 C 752 181 770 72 800 72"/>
+            <path d="M720 181 C 752 181 770 202 800 202"/>
+            <path d="M720 181 C 752 181 770 326 800 326"/>
+          </svg>
+          <div class="rail">
+            <b class="on"><svg class="i i14" viewBox="0 0 24 24"><path d="M12 3v12M8 11l4 4 4-4"/><path d="M4 21h16"/></svg></b>
+            <b><svg class="i i14" viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h13"/></svg></b>
+            <b><svg class="i i14" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg></b>
+          </div>
+
+          <div class="inputnode" style="left:20px;top:84px">
+            <div class="ih"><svg class="i i12" viewBox="0 0 24 24"><path d="M4 4h16v16H4z"/><path d="M4 9h16M9 9v11"/></svg>sales_2026.csv<span class="m">4 行 × 4 列</span></div>
+            <table>
+              <colgroup><col style="width:30%"><col style="width:24%"><col style="width:20%"><col style="width:26%"></colgroup>
+              <tr><th>日期</th><th>地区</th><th>品类</th><th style="text-align:right">金额</th></tr>
+              <tr><td>2026-01-04</td><td>华东</td><td>办公</td><td class="num">12,480</td></tr>
+              <tr><td>2026-01-04</td><td>华南</td><td>耗材</td><td class="num">3,260</td></tr>
+              <tr><td>2026-01-05</td><td>华东</td><td>办公</td><td class="num">8,940</td></tr>
+              <tr><td>2026-01-05</td><td>华北</td><td>设备</td><td class="num">21,700</td></tr>
+            </table>
+            <div class="if">sales_2026.csv · 4 行 × 4 列</div>
+          </div>
+
+          <div class="snode" style="left:520px;top:150px">
+            <div class="sh"><span class="idx">01</span><span class="nm">filter</span><span class="tag">A</span></div>
+            <div class="sb"><span class="p">region = 华东</span></div>
+          </div>
+          <div class="snode" style="left:800px;top:40px">
+            <div class="sh"><span class="idx">02</span><span class="nm">groupby</span><span class="tag">B</span></div>
+            <div class="sb"><span class="p">by=品类</span><span class="p">sum(金额)</span></div>
+          </div>
+          <div class="snode" style="left:800px;top:170px;opacity:.72">
+            <div class="sh"><span class="idx">03</span><span class="nm">sort</span><span class="tag">C</span></div>
+            <div class="sb"><span class="p">-k 金额</span><span class="p">--numeric</span></div>
+          </div>
+          <div class="snode" style="left:800px;top:294px;opacity:.72">
+            <div class="sh"><span class="idx">04</span><span class="nm">dedup</span><span class="tag">D</span></div>
+            <div class="sb"><span class="p">category</span></div>
+          </div>
+
+          <div style="position:absolute;left:20px;top:12px;font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-3)">
+            只选分支 01 · 其余不进入本次 run
+          </div>
+        </div>
+
+        <div class="dock">
+          <div class="dock-head">
+            <div class="dock-tabs">
+              <div class="dtab">日志 <span class="cnt">12</span></div>
+              <div class="dtab on">运行 <span class="cnt">1</span></div>
+            </div>
+            <span class="vrule"></span>
+            <div style="flex:1"></div>
+            <div style="display:flex;align-items:center;gap:4px;font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-3)">
+              <svg class="i i12" viewBox="0 0 24 24"><path d="M4 5h16v12H4z"/><path d="M8 21h8M12 17v4"/></svg>
+              out/结果.csv
+            </div>
+          </div>
+          <div class="dock-body">
+            <div class="plan">
+              <div class="plan-tools">
+                <span class="all">
+                  <span class="cb ind"></span>
+                  全选
+                </span>
+                <span class="sepv"></span>
+                <span class="sum">已选 <b>1 / 3</b></span>
+              </div>
+
+              <div class="prows">
+                <div class="prow">
+                  <span class="cb on"><svg viewBox="0 0 12 12"><path d="M2.5 6.2l2.2 2.2 4.8-4.8"/></svg></span>
+                  <span class="n">01</span>
+                  <span class="chain"><span class="step">filter</span><span class="arr">›</span><span class="step">groupby</span></span>
+                  <span class="steps">2 步</span>
+                  <span class="only">只运行</span>
+                </div>
+                <div class="prow hover off">
+                  <span class="cb"></span>
+                  <span class="n">02</span>
+                  <span class="chain"><span class="step">filter</span><span class="arr">›</span><span class="step">sort</span></span>
+                  <span class="steps">2 步</span>
+                  <span class="only">只运行</span>
+                </div>
+                <div class="prow off">
+                  <span class="cb"></span>
+                  <span class="n">03</span>
+                  <span class="chain"><span class="step">filter</span><span class="arr">›</span><span class="step">dedup</span></span>
+                  <span class="steps">2 步</span>
+                  <span class="only">只运行</span>
+                </div>
+              </div>
+
+              <div class="plan-risk calm">
+                <span class="swatch" style="background:var(--muted-fg-3)"></span>
+                输出 <b>out/结果.csv</b> 将写入 1 次
+              </div>
+
+              <div class="plan-foot">
+                <span class="hint">选择要运行的分支</span>
+                <span class="btns"><span class="btn">取消</span><span class="btn primary">运行所选 1 条</span></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="cap">取消勾选的行降到 70% 对比度，但链名仍然可读；悬停未选行仍可「只运行」它。<b>全选框</b>变成半选状态，点一次恢复全选。</p>
+    </div>
+  </section>
+
+  <!-- 03 状态细节 -->
+  <section>
+    <div class="sec-hd"><span class="sec-no">03</span><h2>四种选择状态</h2></div>
+    <p class="sec-note">计数、摘要、提示和主按钮是同一份选择状态的四次呈现，不能各说各话。</p>
+
+    <div class="statecards">
+      <div class="statecard">
+        <div class="sh"><span class="sn">01</span><b>全选</b><span class="count">3 / 3</span></div>
+        <div class="lines">
+          <div class="sline"><span class="cb on"><svg viewBox="0 0 12 12"><path d="M2.5 6.2l2.2 2.2 4.8-4.8"/></svg></span><span class="n">01</span><span>filter › groupby</span><span class="st">2 步</span></div>
+          <div class="sline"><span class="cb on"><svg viewBox="0 0 12 12"><path d="M2.5 6.2l2.2 2.2 4.8-4.8"/></svg></span><span class="n">02</span><span>filter › sort</span><span class="st">2 步</span></div>
+          <div class="sline"><span class="cb on"><svg viewBox="0 0 12 12"><path d="M2.5 6.2l2.2 2.2 4.8-4.8"/></svg></span><span class="n">03</span><span>filter › dedup</span><span class="st">2 步</span></div>
+        </div>
+        <div class="sum">已选 3 / 3</div>
+        <div class="mini">运行全部 3 条</div>
+        <div class="warn amber">输出将被覆盖 3 次</div>
+      </div>
+
+      <div class="statecard">
+        <div class="sh"><span class="sn">02</span><b>部分选中</b><span class="count">2 / 3</span></div>
+        <div class="lines">
+          <div class="sline"><span class="cb on"><svg viewBox="0 0 12 12"><path d="M2.5 6.2l2.2 2.2 4.8-4.8"/></svg></span><span class="n">01</span><span>filter › groupby</span><span class="st">2 步</span></div>
+          <div class="sline"><span class="cb on"><svg viewBox="0 0 12 12"><path d="M2.5 6.2l2.2 2.2 4.8-4.8"/></svg></span><span class="n">02</span><span>filter › sort</span><span class="st">2 步</span></div>
+          <div class="sline off"><span class="cb"></span><span class="n">03</span><span>filter › dedup</span><span class="st">2 步</span></div>
+        </div>
+        <div class="sum">已选 2 / 3</div>
+        <div class="mini">运行所选 2 条</div>
+        <div class="warn amber">输出将被覆盖 2 次</div>
+      </div>
+
+      <div class="statecard">
+        <div class="sh"><span class="sn">03</span><b>只选一条</b><span class="count">1 / 3</span></div>
+        <div class="lines">
+          <div class="sline"><span class="cb on"><svg viewBox="0 0 12 12"><path d="M2.5 6.2l2.2 2.2 4.8-4.8"/></svg></span><span class="n">01</span><span>filter › groupby</span><span class="st">2 步</span></div>
+          <div class="sline off"><span class="cb"></span><span class="n">02</span><span>filter › sort</span><span class="st">2 步</span></div>
+          <div class="sline off"><span class="cb"></span><span class="n">03</span><span>filter › dedup</span><span class="st">2 步</span></div>
+        </div>
+        <div class="sum">已选 1 / 3</div>
+        <div class="mini">运行所选 1 条</div>
+        <div class="warn">输出只写入 1 次</div>
+      </div>
+
+      <div class="statecard">
+        <div class="sh"><span class="sn">04</span><b>一条不选</b><span class="count">0 / 3</span></div>
+        <div class="lines">
+          <div class="sline off"><span class="cb"></span><span class="n">01</span><span>filter › groupby</span><span class="st">2 步</span></div>
+          <div class="sline off"><span class="cb"></span><span class="n">02</span><span>filter › sort</span><span class="st">2 步</span></div>
+          <div class="sline off"><span class="cb"></span><span class="n">03</span><span>filter › dedup</span><span class="st">2 步</span></div>
+        </div>
+        <div class="sum">已选 0 / 3</div>
+        <div class="mini disabled">选择分支</div>
+        <div class="warn">选择要运行的分支</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 04 运行中 -->
+  <section>
+    <div class="sec-hd"><span class="sec-no">04</span><h2>运行中：只列选中的分支</h2></div>
+    <p class="sec-note">这次只跑了 01 和 02。清单里没有 03；底部保留一行「1 条分支未运行 · 运行剩余」。画布上未选中的节点保持常态，不标「已跳过」。</p>
+
+    <div class="figure">
+      <div class="win">
+        <div class="bar">
+          <div class="brand">Easy CSV</div>
+          <div class="menus">
+            <div class="mbtn">文件</div><div class="mbtn">编辑</div><div class="mbtn">查看</div>
+            <div class="mbtn" style="background:color-mix(in oklab,var(--brand) 14%,#fff)">执行</div>
+            <div class="mbtn">工具</div><div class="mbtn">帮助</div>
+          </div>
+          <div class="field-wrap"><div class="field"><span class="prompt">›</span><span class="ph">搜索命令、步骤或文件</span><kbd>Ctrl F</kbd></div></div>
+          <div class="icons">
+            <div class="icon-btn on"><svg class="i" viewBox="0 0 24 24"><path d="M4 7h16M4 12h10M4 17h7"/></svg></div>
+            <div class="icon-btn"><svg class="i" viewBox="0 0 24 24"><path d="M4 5h16v12H4z"/><path d="M8 21h8M12 17v4"/></svg></div>
+          </div>
+          <div class="wctl"><div class="wbtn">—</div><div class="wbtn">□</div><div class="wbtn">×</div></div>
+        </div>
+
+        <div class="tabstrip">
+          <div class="tab on">销售清洗 <span class="badge">运行中</span><span class="x">×</span></div>
+          <div class="tab">订单聚合 <span class="x">×</span></div>
+          <div class="tab" style="color:var(--muted-fg-3)">＋</div>
+        </div>
+
+        <div class="canvas">
+          <div style="position:absolute;left:0;right:0;top:0;height:2px;background:var(--border-soft)">
+            <span style="position:absolute;inset:0 50% 0 0;background:var(--brand);display:block"></span>
+          </div>
+          <svg class="edges" viewBox="0 0 1280 404" preserveAspectRatio="none">
+            <path d="M440 166 C 476 166 486 181 520 181"/>
+            <path d="M720 181 C 752 181 770 72 800 72"/>
+            <path d="M720 181 C 752 181 770 202 800 202"/>
+            <path d="M720 181 C 752 181 770 326 800 326"/>
+          </svg>
+          <div class="rail">
+            <b class="on"><svg class="i i14" viewBox="0 0 24 24"><path d="M12 3v12M8 11l4 4 4-4"/><path d="M4 21h16"/></svg></b>
+            <b><svg class="i i14" viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h13"/></svg></b>
+            <b><svg class="i i14" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg></b>
+          </div>
+
+          <div class="inputnode" style="left:20px;top:84px">
+            <div class="ih"><svg class="i i12" viewBox="0 0 24 24"><path d="M4 4h16v16H4z"/><path d="M4 9h16M9 9v11"/></svg>sales_2026.csv<span class="m">4 行 × 4 列</span></div>
+            <table>
+              <colgroup><col style="width:30%"><col style="width:24%"><col style="width:20%"><col style="width:26%"></colgroup>
+              <tr><th>日期</th><th>地区</th><th>品类</th><th style="text-align:right">金额</th></tr>
+              <tr><td>2026-01-04</td><td>华东</td><td>办公</td><td class="num">12,480</td></tr>
+              <tr><td>2026-01-04</td><td>华南</td><td>耗材</td><td class="num">3,260</td></tr>
+              <tr><td>2026-01-05</td><td>华东</td><td>办公</td><td class="num">8,940</td></tr>
+              <tr><td>2026-01-05</td><td>华北</td><td>设备</td><td class="num">21,700</td></tr>
+            </table>
+            <div class="if">sales_2026.csv · 4 行 × 4 列</div>
+          </div>
+
+          <div class="snode done" style="left:520px;top:150px">
+            <div class="sh"><span class="idx">01</span><span class="nm">filter</span><span class="tag">A</span></div>
+            <div class="sb"><span class="p">region = 华东</span></div>
+            <div class="rep">已跑 2 次</div>
+          </div>
+          <div class="snode done" style="left:800px;top:40px">
+            <div class="sh"><span class="idx">02</span><span class="nm">groupby</span><span class="tag">B</span></div>
+            <div class="sb"><span class="p">by=品类</span><span class="p">sum(金额)</span></div>
+          </div>
+          <div class="snode running" style="left:800px;top:170px">
+            <div class="sh"><span class="idx">03</span><span class="nm">sort</span><span class="tag">C</span></div>
+            <div class="sb"><span class="p">-k 金额</span><span class="p">--numeric</span></div>
+            <div class="cur">运行中 · 0:06</div>
+          </div>
+          <div class="snode" style="left:800px;top:294px">
+            <div class="sh"><span class="idx">04</span><span class="nm">dedup</span><span class="tag">D</span></div>
+            <div class="sb"><span class="p">category</span></div>
+          </div>
+
+          <div style="position:absolute;left:20px;top:12px;font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-3)">
+            分支 02 正在执行 · 分支 03 未选
+          </div>
+        </div>
+
+        <div class="dock">
+          <div class="dock-head">
+            <div class="dock-tabs">
+              <div class="dtab">日志 <span class="cnt">34</span></div>
+              <div class="dtab on">运行 <span class="cnt">2</span><span class="dot live"></span></div>
+              <div class="dtab">分支 01 <span class="cnt">3 行</span></div>
+            </div>
+            <span class="vrule"></span>
+            <div class="runhead" style="border:0;height:auto;padding:0;flex:1">
+              <div class="sum">
+                <span class="g"><span class="lamp" style="background:var(--brand)"></span><b>1</b> 运行中</span>
+                <span class="g"><span class="lamp" style="background:var(--success)"></span><b>1</b> 完成</span>
+              </div>
+              <div class="sp"></div>
+              <span class="of">0:14</span>
+            </div>
+          </div>
+          <div class="runlist">
+            <div class="runrow">
+              <span class="n">01</span>
+              <span class="chain"><span class="step">filter</span><span class="arr">›</span><span class="step">groupby</span></span>
+              <span class="st"><span class="lamp ok"></span>完成</span>
+              <span class="cur">—</span>
+              <span class="time">0:08</span>
+              <span class="acts"><span>结果</span><span class="m">重跑</span></span>
+            </div>
+            <div class="runrow">
+              <span class="n">02</span>
+              <span class="chain"><span class="step">filter</span><span class="arr">›</span><span class="step">sort</span></span>
+              <span class="st"><span class="lamp run"></span>运行中</span>
+              <span class="cur">sort</span>
+              <span class="time">0:06</span>
+              <span class="acts"><span class="d">取消</span></span>
+            </div>
+          </div>
+          <div class="runfoot">
+            <b>1</b> 条分支未运行 · 分支 03
+            <span class="go">运行剩余</span>
+          </div>
+        </div>
+      </div>
+      <p class="cap"><b>未选中节点</b>（dedup）保持常态，不降透明度；只有「选中但被跳过」才降透明度。<b>运行剩余</b>在清单底部，不占分支行，也不会误触「取消」。</p>
+    </div>
+  </section>
+
+  <!-- 05 结果 -->
+  <section>
+    <div class="sec-hd"><span class="sec-no">05</span><h2>结果：只有跑过的分支才有页签</h2></div>
+    <p class="sec-note">这次只产生分支 01 和 02 两个页签；03 不出现。底部仍保留「运行剩余」，跑完不丢入口。</p>
+
+    <div class="figure">
+      <div class="win" style="width:1180px">
+        <div class="dock" style="border-top:0">
+          <div class="dock-head" style="height:34px">
+            <div class="dock-tabs">
+              <div class="dtab">日志 <span class="cnt">36</span></div>
+              <div class="dtab">运行 <span class="cnt">2</span></div>
+              <div class="dtab on">分支 01 <span class="cnt">3 行</span></div>
+              <div class="dtab">分支 02 <span class="cnt">3 行</span></div>
+            </div>
+            <span class="vrule"></span>
+            <div class="resmeta">
+              <span class="branch">分支 01</span>
+              <span class="path">
+                <span class="no">01</span><span class="nm">filter</span>
+                <span class="sep">›</span>
+                <span class="no">02</span><span class="nm">groupby</span>
+              </span>
+              <span class="t">0:08</span>
+              <span class="m">3 行 × 2 列</span>
+              <span style="display:flex;align-items:center;gap:3px;color:var(--muted-fg-2)">
+                <svg class="i i12" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="1.5"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></svg>
+                <svg class="i i12" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
+              </span>
+            </div>
+          </div>
+          <div class="docktable">
+            <table>
+              <colgroup><col style="width:44px"><col style="width:26%"><col><col style="width:22%"></colgroup>
+              <tr><th class="num">#</th><th>品类</th><th>笔数</th><th class="num">金额</th></tr>
+              <tr><td class="num" style="color:var(--muted-fg-3);font-family:var(--mono);font-size:10px">1</td><td>办公</td><td>2</td><td class="num">21,420</td></tr>
+              <tr><td class="num" style="color:var(--muted-fg-3);font-family:var(--mono);font-size:10px">2</td><td>耗材</td><td>1</td><td class="num">3,260</td></tr>
+              <tr><td class="num" style="color:var(--muted-fg-3);font-family:var(--mono);font-size:10px">3</td><td>设备</td><td>1</td><td class="num">21,700</td></tr>
+            </table>
+          </div>
+          <div class="runfoot" style="border-top:1px solid var(--border-soft)">
+            <b>1</b> 条分支未运行 · 分支 03
+            <span class="go">运行剩余</span>
+          </div>
+        </div>
+      </div>
+      <p class="cap"><b>页签</b>只列本次选中的分支；未选中的分支不生成页签，也不会留下空白页。<b>运行剩余</b>在结果页脚保留，跑完可以直接补跑 03。</p>
+    </div>
+  </section>
+
+  <!-- 06 规格 -->
+  <section>
+    <div class="sec-hd"><span class="sec-no">06</span><h2>规格</h2></div>
+    <p class="sec-note">行高 34，勾选列 20，序号 28，步数 44，只运行 52；所有数字等宽。选择状态只有四种，文案与主按钮一一对应。</p>
+
+    <div class="spec">
+      <div>
+        <div class="anatomy">
+          <div class="arow">
+            <span class="cb on"><svg viewBox="0 0 12 12"><path d="M2.5 6.2l2.2 2.2 4.8-4.8"/></svg></span>
+            <span class="n" style="font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-2)">01</span>
+            <span style="font-size:11.5px">filter › groupby</span>
+            <span style="font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-2);text-align:right">2 步</span>
+            <span style="font-size:10px;color:var(--brand-ink);text-align:right;padding-right:2px">只运行</span>
+          </div>
+          <div class="arow">
+            <span class="cb"></span>
+            <span class="n" style="font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-2)">02</span>
+            <span style="font-size:11.5px;color:var(--muted-fg-2)">filter › sort</span>
+            <span style="font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-2);text-align:right">2 步</span>
+            <span style="font-size:10px;color:var(--brand-ink);text-align:right;opacity:.35">只运行</span>
+          </div>
+        </div>
+        <div class="dims">
+          <span><i></i>34 行高</span><span><i></i>20 勾选</span><span><i></i>28 序号</span><span><i></i>44 步数</span><span><i></i>56 只运行</span>
+        </div>
+        <p style="font-size:11px;color:var(--muted-fg-2);margin-top:10px">「只运行」默认隐藏，悬停/聚焦才出现；未选行仍可悬停并只跑它。</p>
+      </div>
+
+      <div class="annot">
+        <ul>
+          <li><b>选择状态</b>：<code>selectedBranchIndexes: number[]</code>，默认全选；0 条时主按钮禁用，回车不执行。</li>
+          <li><b>摘要</b>：<code>buildRunPlan(steps, edges, selectedIndexes)</code> 只统计选中的分支；覆盖次数 = 选中分支里写同一路径的终端数。</li>
+          <li><b>只运行</b>：等价于 <code>selected = [index]</code> 后立即开始，跳过选择页的二次确认。</li>
+          <li><b>未选中</b>：不进入 <code>runPipeline</code>，不写 <code>executionStates</code>，不生成 <code>ResultPreview</code>；运行面板只列选中分支。</li>
+          <li><b>运行剩余</b>：<code>unselectedBranchCount &gt; 0</code> 时出现；点击回到选择页并预勾选未跑过的分支。</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>勾选与按钮状态</h3>
+    <div class="state-demo">
+      <div class="demo-block">
+        <span class="dl">checkbox</span>
+        <div class="demo-line"><span class="cb on"><svg viewBox="0 0 12 12"><path d="M2.5 6.2l2.2 2.2 4.8-4.8"/></svg></span>选中</div>
+        <div class="demo-line"><span class="cb"></span>未选</div>
+        <div class="demo-line"><span class="cb ind"></span>半选（全选框）</div>
+        <div class="demo-line"><span class="cb focus"></span>键盘焦点</div>
+      </div>
+      <div class="demo-block">
+        <span class="dl">primary</span>
+        <div class="btn-samples">
+          <span class="btn primary">运行全部 3 条</span>
+          <span class="btn primary">运行所选 2 条</span>
+          <span class="btn primary">运行所选 1 条</span>
+          <span class="btn disabled">选择分支</span>
+        </div>
+      </div>
+      <div class="demo-block">
+        <span class="dl">risk</span>
+        <div class="demo-line" style="color:var(--warning)">
+          <span class="swatch" style="background:var(--warning)"></span>输出将被覆盖 3 次
+        </div>
+        <div class="demo-line" style="color:var(--muted-fg)">
+          <span class="swatch" style="background:var(--muted-fg-3)"></span>输出将写入 1 次
+        </div>
+      </div>
+    </div>
+
+    <h3>状态与文案</h3>
+    <table class="states">
+      <thead><tr><th>状态</th><th>计数</th><th>摘要</th><th>提示</th><th>主按钮</th></tr></thead>
+      <tbody>
+        <tr><td>全选</td><td>3 / 3</td><td>已选 3 / 3</td><td>覆盖 3 次（琥珀）</td><td>运行全部 3 条</td></tr>
+        <tr><td>部分选中</td><td>2 / 3</td><td>已选 2 / 3</td><td>覆盖 2 次（琥珀）</td><td>运行所选 2 条</td></tr>
+        <tr><td>只选一条</td><td>1 / 3</td><td>已选 1 / 3</td><td>写入 1 次（中性）</td><td>运行所选 1 条</td></tr>
+        <tr><td>一条不选</td><td>0 / 3</td><td>已选 0 / 3</td><td>选择要运行的分支</td><td>选择分支（禁用）</td></tr>
+        <tr><td>行悬停 / 聚焦</td><td>—</td><td>不变</td><td>不变</td><td>行尾出现「只运行」</td></tr>
+      </tbody>
+    </table>
+
+    <h3>新增文案</h3>
+    <table class="keys">
+      <thead><tr><th>key</th><th>中文</th><th>英文</th></tr></thead>
+      <tbody>
+        <tr><td>runSelectAll</td><td>全选</td><td>Select all</td></tr>
+        <tr><td>runSelectedCount</td><td>已选 {selected} / {total}</td><td>{selected} of {total} selected</td></tr>
+        <tr><td>runOnlyThis</td><td>只运行</td><td>Run only this</td></tr>
+        <tr><td>runSelectedAction</td><td>运行所选 {count} 条</td><td>Run {count} selected</td></tr>
+        <tr><td>runAllAction</td><td>运行全部 {count} 条</td><td>Run all {count}</td></tr>
+        <tr><td>runNoSelection</td><td>选择分支</td><td>Choose branches</td></tr>
+        <tr><td>runNoSelectionHint</td><td>选择要运行的分支</td><td>Choose branches to run</td></tr>
+        <tr><td>runOutputSingle</td><td>输出 {path} 将写入 1 次</td><td>{path} will be written once</td></tr>
+        <tr><td>runUnselectedHint</td><td>{count} 条分支未运行</td><td>{count} branches not run</td></tr>
+        <tr><td>runRemaining</td><td>运行剩余</td><td>Run remaining</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <div class="foot">
+    <span>Easy CSV · 设计原型 086-02</span>
+    <span>独立 HTML，仅用于评审</span>
+  </div>
+</div>
+</body>
+</html>

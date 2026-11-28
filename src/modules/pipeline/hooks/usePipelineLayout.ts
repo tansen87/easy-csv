@@ -23,6 +23,7 @@ interface UsePipelineLayoutArgs {
   /** Chosen table when the input is a `.duckdb` file. */
   sourceTable?: string;
   selectedStepId?: string;
+  executionStates?: Record<string, string>;
   highlightedNodeId: string | null;
   // Callback refs captured to avoid unnecessary re-layout
   onStepClickRef: RefObject<(step: PipelineStep) => void>;
@@ -73,6 +74,7 @@ export function usePipelineLayout({
   inputFormat,
   sourceTable,
   selectedStepId,
+  executionStates,
   highlightedNodeId,
   onStepClickRef,
   onStepRemoveRef,
@@ -193,8 +195,9 @@ export function usePipelineLayout({
           ...node.data,
           isSelected: node.id === selectedStepId,
           isHighlighted: node.id === highlightedNodeId,
+          executionState: executionStates?.[node.id],
         },
       })),
     );
-  }, [selectedStepId, highlightedNodeId, setNodes]);
+  }, [selectedStepId, highlightedNodeId, executionStates, setNodes]);
 }

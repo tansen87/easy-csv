@@ -436,6 +436,8 @@ describe("useBatchFilter command building", () => {
         delimiter: ",",
         isCancelled: () => false,
         onProgress: vi.fn(),
+        onBranchState: vi.fn(),
+        onStepState: vi.fn(),
         log: vi.fn(),
         ...overrides,
       };

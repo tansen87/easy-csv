@@ -63,6 +63,8 @@ interface HomeViewProps {
     name: string;
     status: "executing" | "completed" | "error";
   } | null;
+  /** Step states of the current run, projected onto the canvas (design 086). */
+  executionStates?: Record<string, import("@/types/execution").StepExecutionStatus>;
   showProgressBar?: boolean;
   isExecuting?: boolean;
   /** Per-tab run state, used for the tab-strip badges (design 028 §5.4). */
@@ -131,6 +133,7 @@ export const HomeView = React.memo(function HomeView({
   onImportPipeline,
   onOpenUrl,
   branchProgress,
+  executionStates,
   showProgressBar,
   recentFiles = [],
   onOpenRecentFile,
@@ -359,6 +362,7 @@ export const HomeView = React.memo(function HomeView({
           onSave={handleSaveRenames}
           onTableDelete={handleTableDelete}
           selectedStepId={selectedStepId}
+          executionStates={executionStates}
           savedEdges={edges}
           savedInputPosition={inputPosition}
           reactFlowInstanceRef={reactFlowInstanceRef}

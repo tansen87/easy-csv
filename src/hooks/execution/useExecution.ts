@@ -10,6 +10,7 @@ import type {
   StepLineage,
 } from "@/types/xan";
 import type {
+  BranchRunState,
   OverwriteConfirm,
   PendingRun,
   ResultPreview,
@@ -17,6 +18,7 @@ import type {
   RunId,
   RunSession,
   RunState,
+  StepExecutionStatus,
   TabChartState,
   VariablePrompt,
 } from "@/types/execution";
@@ -28,6 +30,7 @@ import {
 } from "@/utils/params";
 import { useLanguage } from "@/i18n";
 import { runPipeline } from "@/hooks/execution/runPipeline";
+import { buildRunPlan } from "@/hooks/execution/buildBranches";
 import type { RunPipelineDeps } from "@/hooks/execution/runPipelineDeps";
 
 /** How long the progress pill keeps showing a finished run. */
@@ -187,6 +190,22 @@ export function useExecution({
     });
   }, []);
 
+  /** Patch the selected branch list without rebuilding the whole session. */
+  const updateRunBranches = useCallback(
+    (runId: RunId, updater: (branches: BranchRunState[]) => BranchRunState[]) => {
+      setRuns((prev) => {
+        const entry = Object.entries(prev).find(([, s]) => s.runId === runId);
+        if (!entry) return prev;
+        const [tabId, session] = entry;
+        return {
+          ...prev,
+          [tabId]: { ...session, branches: updater(session.branches ?? []) },
+        };
+      });
+    },
+    [],
+  );
+
   const dropRun = useCallback((runId: RunId) => {
     const timer = timersRef.current.get(runId);
     if (timer) {
@@ -273,18 +292,57 @@ export function useExecution({
       isCancelled: () =>
         runFlagsRef.current.get(session.runId)?.cancelled ?? false,
       onProgress: (value) => updateRun(session.runId, { branch: value }),
+      onBranchState: (index, patch) =>
+        updateRunBranches(session.runId, (branches) =>
+          branches.map((branch) =>
+            branch.index === index ? { ...branch, ...patch } : branch,
+          ),
+        ),
+      onStepState: (branchIndex, stepId, status: StepExecutionStatus) =>
+        updateRunBranches(session.runId, (branches) =>
+          branches.map((branch) =>
+            branch.index === branchIndex
+              ? {
+                  ...branch,
+                  steps: branch.steps.map((step) =>
+                    step.id === stepId ? { ...step, status } : step,
+                  ),
+                }
+              : branch,
+          ),
+        ),
       // Every line this run produces is tagged with its tab and run (design
       // 071 run groups).
       log: (type, message) =>
         addLog(type, message, session.tabId, session.runId),
     }),
-    [addLog, updateRun],
+    [addLog, updateRun, updateRunBranches],
+  );
+
+  const skipPendingBranches = useCallback(
+    (runId: RunId) =>
+      updateRunBranches(runId, (branches) =>
+        branches.map((branch) =>
+          branch.status === "pending"
+            ? {
+                ...branch,
+                status: "skipped",
+                steps: branch.steps.map((step) => ({
+                  ...step,
+                  status: "skipped" as const,
+                })),
+              }
+            : branch,
+        ),
+      ),
+    [updateRunBranches],
   );
 
   const buildDeps = useCallback(
     (): RunPipelineDeps => ({
       updateRun,
       finishRun,
+      skipPendingBranches,
       releaseRun: releaseRunSlot,
       updateTab,
       showToast,
@@ -330,6 +388,7 @@ export function useExecution({
       openResults,
       setTabChart,
       setTabResultPreview,
+      skipPendingBranches,
       showToast,
       t.cycleDetected,
       trackLineage,
@@ -431,7 +490,10 @@ export function useExecution({
 
   /** Validation + snapshot + session creation for one tab (current or not). */
   const executeForTab = useCallback(
-    async (tab: PipelineTab | undefined) => {
+    async (
+      tab: PipelineTab | undefined,
+      opts?: { selectedBranchIndexes?: number[] },
+    ) => {
       if (!tab) return;
       const running = runsRef.current[tab.id];
       if (
@@ -470,9 +532,33 @@ export function useExecution({
         return;
       }
 
+      // Only validate the branches the user picked: an unselected branch with
+      // a half-filled command must not block this run (design 086).
+      let validationSteps = executableSteps;
+      if (opts?.selectedBranchIndexes) {
+        try {
+          const plan = buildRunPlan(
+            executableSteps,
+            edges,
+            opts.selectedBranchIndexes,
+          );
+          if (plan.selectedIndexes.length === 0) {
+            showToast(t.runNoSelectionHint, "warning");
+            return;
+          }
+          const selectedIds = new Set(plan.uniqueStepIds);
+          validationSteps = executableSteps.filter((step) =>
+            selectedIds.has(step.id),
+          );
+        } catch {
+          // A cycle is reported by runPipeline with the node chain; validating
+          // every step here is the least surprising fallback.
+        }
+      }
+
       // Validate required parameters before execution
       const missingParams: string[] = [];
-      for (const step of executableSteps) {
+      for (const step of validationSteps) {
         for (const param of step.command.parameters) {
           if (
             param.required &&
@@ -500,6 +586,7 @@ export function useExecution({
         currentPipeline,
         currentTab: tab,
         inputFile,
+        selectedBranchIndexes: opts?.selectedBranchIndexes,
       };
 
       const runId: RunId = `${tab.id}-${Date.now()}-${Math.random()
@@ -526,7 +613,7 @@ export function useExecution({
       // F3: collect referenced variables and detect any that are unassigned.
       const declared = new Map((tab.variables || []).map((v) => [v.name, v]));
       const resolved = collectVariablesFromPipeline(
-        executableSteps,
+        validationSteps,
         tab.variables,
       );
       const values: Record<string, string> = {};
@@ -551,7 +638,13 @@ export function useExecution({
       }
       proceedToSchedule(session, values);
     },
-    [defaultDelimiter, enqueuePrompt, proceedToSchedule, showToast],
+    [
+      defaultDelimiter,
+      enqueuePrompt,
+      proceedToSchedule,
+      showToast,
+      t.runNoSelectionHint,
+    ],
   );
 
   /** Run the currently selected tab (toolbar / Ctrl+R / command palette). */
@@ -561,9 +654,9 @@ export function useExecution({
 
   /** Click a row in the execute menu: switch to that tab, then run it. */
   const runTab = useCallback(
-    async (tabId: string) => {
+    async (tabId: string, selectedBranchIndexes?: number[]) => {
       setSelectedTabId(tabId);
-      await executeForTab(getTabById(tabId));
+      await executeForTab(getTabById(tabId), { selectedBranchIndexes });
     },
     [executeForTab, getTabById, setSelectedTabId],
   );

@@ -1,9 +1,16 @@
 import React from "react";
 import { createPortal } from "react-dom";
-import { ScrollText, Bot, Settings, Search } from "lucide-react";
+import {
+  ChevronRight,
+  ScrollText,
+  Bot,
+  Settings,
+  Search,
+} from "lucide-react";
 
 import { PipelineStep } from "@/types/xan";
-import type { RunSession } from "@/types/execution";
+import type { RunSession, TabBranches } from "@/types/execution";
+import { BranchPicker } from "@/components/menu/BranchPicker";
 import { useLanguage } from "@/i18n";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { cn } from "@/lib/utils";
@@ -17,10 +24,10 @@ const withVersionPrefix = (version: string) =>
   version.startsWith("v") ? version : `v${version}`;
 
 /**
- * Width of the run panel. One constant so it can be tuned here; 240 still
- * leaves the name column ~100px after the lamp, readout and action.
+ * Width of the run panel. 320 is what the branch picker needs for a checkbox,
+ * a chain and a step count on one row (design 086 · A6).
  */
-const RUN_PANEL_WIDTH = 240;
+const RUN_PANEL_WIDTH = 320;
 
 /**
  * Shell of all five dropdowns (design 054). Width follows the content instead
@@ -80,7 +87,12 @@ interface MainMenuProps {
   /** Switch to a tab without running it (clicking a running row). */
   onSelectTab: (tabId: string) => void;
   /** Switch to a tab and start its run (clicking an idle row). */
-  onRunTab: (tabId: string) => void;
+  onRunTab: (tabId: string, selectedBranchIndexes?: number[]) => void;
+  /**
+   * Branch plan per tab, for the Execute menu's picker (design 086). A tab with
+   * >1 branch shows "分支 ›" and opens the picker instead of running at once.
+   */
+  branchesByTab?: Record<string, TabBranches>;
   /** Cancel one tab's run (the "取消" button inside a running row). */
   onCancelTab: (tabId: string) => void;
   onOpenFile: () => void;
@@ -170,6 +182,7 @@ export const MainMenu = React.memo(function MainMenu({
   currentTabId,
   onSelectTab,
   onRunTab,
+  branchesByTab,
   onCancelTab,
   onOpenFile,
   onOpenNewTabWithFile,
@@ -226,6 +239,9 @@ export const MainMenu = React.memo(function MainMenu({
     left: number;
     top: number;
   } | null>(null);
+  /** Tab whose branch picker is open (second level of the panel). */
+  const [pickerTabId, setPickerTabId] = React.useState<string | null>(null);
+  const [branchSelection, setBranchSelection] = React.useState<number[]>([]);
 
   /**
    * The panel is portalled out of the title bar. Inside it, the empty rows and
@@ -246,6 +262,8 @@ export const MainMenu = React.memo(function MainMenu({
   React.useLayoutEffect(() => {
     if (!execMenuOpen) {
       setExecPanelPos(null);
+      setPickerTabId(null);
+      setBranchSelection([]);
       return;
     }
     placeExecPanel();
@@ -266,7 +284,13 @@ export const MainMenu = React.memo(function MainMenu({
       }
     };
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setExecMenuOpen(false);
+      if (e.key !== "Escape") return;
+      if (pickerTabId) {
+        setPickerTabId(null);
+        setBranchSelection([]);
+        return;
+      }
+      setExecMenuOpen(false);
     };
     document.addEventListener("mousedown", onDocMouseDown);
     window.addEventListener("keydown", onKeyDown);
@@ -274,7 +298,7 @@ export const MainMenu = React.memo(function MainMenu({
       document.removeEventListener("mousedown", onDocMouseDown);
       window.removeEventListener("keydown", onKeyDown);
     };
-  }, [execMenuOpen]);
+  }, [execMenuOpen, pickerTabId]);
 
   /** Current tab first inside every group, so its action is always one glance away. */
   const withCurrentFirst = (list: typeof tabs) =>
@@ -307,10 +331,17 @@ export const MainMenu = React.memo(function MainMenu({
     return state === "running" || state === "queued" || state === "preparing";
   });
 
+  const pickerPlan = pickerTabId ? branchesByTab?.[pickerTabId] : undefined;
+  const pickerTabName =
+    tabs.find((tab) => tab.id === pickerTabId)?.name ?? "";
+
   /**
    * One row of the run panel. The row itself only switches tabs; every action
    * lives in the trailing button, so a click never means two different things.
    * Left lamp + mono readout carry the state, never a coloured pill.
+   *
+   * Idle rows with >1 branch open the branch picker instead of running at once
+   * (design 086 · A6); single-branch rows keep the one-click run.
    */
   const renderExecRow = (
     tab: { id: string; name: string } | undefined,
@@ -323,6 +354,8 @@ export const MainMenu = React.memo(function MainMenu({
     const queued = state === "queued";
     const pending = state === "preparing";
     const failed = state === "error";
+    const branchCount = branchesByTab?.[tab.id]?.branches.length ?? 0;
+    const multiBranch = branchCount > 1;
 
     const switchTo = () => {
       setExecMenuOpen(false);
@@ -332,13 +365,24 @@ export const MainMenu = React.memo(function MainMenu({
       setExecMenuOpen(false);
       onRunTab(tab.id);
     };
+    const openPicker = () => {
+      const plan = branchesByTab?.[tab.id];
+      if (!plan || plan.branches.length <= 1) {
+        runNow();
+        return;
+      }
+      onSelectTab(tab.id);
+      setPickerTabId(tab.id);
+      setBranchSelection(plan.branches.map((branch) => branch.index));
+    };
     const stopNow = () => {
       setExecMenuOpen(false);
       onCancelTab(tab.id);
     };
-    /** Idle rows run on click; a run that is already in flight only switches. */
+    /** Idle multi-branch rows open the picker; everything in flight switches. */
     const activate = () => {
       if (running || queued || pending) switchTo();
+      else if (multiBranch) openPicker();
       else runNow();
     };
 
@@ -384,7 +428,9 @@ export const MainMenu = React.memo(function MainMenu({
               }`
             : failed
               ? t.runStateFailed
-              : ""}
+              : branchCount > 0
+                ? t.runBranchCount.replace("{count}", String(branchCount))
+                : ""}
         </span>
         {running || queued ? (
           <button
@@ -407,6 +453,18 @@ export const MainMenu = React.memo(function MainMenu({
             className="h-[22px] rounded-[5px] bg-warning-soft px-2 text-[11px] font-medium text-warning transition-colors hover:bg-warning/15"
           >
             {t.runHandle}
+          </button>
+        ) : multiBranch ? (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              openPicker();
+            }}
+            className="flex h-[22px] items-center gap-0.5 rounded-[5px] bg-primary/10 pl-2 pr-1.5 text-[11px] font-medium text-primary transition-colors hover:bg-primary/15"
+          >
+            {t.runPickBranches}
+            <ChevronRight className="h-3 w-3" strokeWidth={1.8} />
           </button>
         ) : (
           <button
@@ -1100,25 +1158,70 @@ export const MainMenu = React.memo(function MainMenu({
                 }}
                 className="z-50 overflow-hidden rounded-[10px] border border-border bg-popover shadow-lg"
               >
-                <div className="max-h-[320px] overflow-y-auto p-1">
-                  {renderGroup("running", t.runGroupRunning, runningTabs)}
-                  {renderGroup("queued", t.runStateQueued, queuedTabs)}
-                  {renderGroup("preparing", t.runStatePending, pendingTabs)}
-                  {renderGroup("idle", t.runGroupIdle, idleTabs)}
-                </div>
-                <div className="flex h-8 items-center justify-between border-t border-border-soft px-2.5 text-[11px] text-muted-foreground">
-                  <span>
-                    {t.runLimitHint.replace(
-                      "{count}",
-                      String(maxConcurrentRuns),
-                    )}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <kbd className="rounded border border-border bg-card px-1 py-px font-mono text-[10px] leading-4 text-muted-foreground">
-                      Ctrl R
-                    </kbd>
-                  </span>
-                </div>
+                {pickerTabId && pickerPlan ? (
+                  <BranchPicker
+                    tabName={pickerTabName}
+                    branches={pickerPlan.branches}
+                    outputPath={pickerPlan.outputPath}
+                    selected={branchSelection}
+                    onToggle={(index) =>
+                      setBranchSelection((prev) =>
+                        prev.includes(index)
+                          ? prev.filter((value) => value !== index)
+                          : [...prev, index].sort((a, b) => a - b),
+                      )
+                    }
+                    onSelectAll={() => {
+                      const all = pickerPlan.branches.map(
+                        (branch) => branch.index,
+                      );
+                      setBranchSelection((prev) =>
+                        prev.length === all.length ? [] : all,
+                      );
+                    }}
+                    onRun={(indexes) => {
+                      if (!pickerTabId) return;
+                      onRunTab(pickerTabId, indexes);
+                      setExecMenuOpen(false);
+                      setPickerTabId(null);
+                      setBranchSelection([]);
+                    }}
+                    onBack={() => {
+                      const returnTo = pickerTabId;
+                      setPickerTabId(null);
+                      setBranchSelection([]);
+                      window.requestAnimationFrame(() => {
+                        (
+                          execPanelRef.current?.querySelector(
+                            `[data-tab-id="${returnTo}"]`,
+                          ) as HTMLElement | null
+                        )?.focus();
+                      });
+                    }}
+                  />
+                ) : (
+                  <>
+                    <div className="max-h-[320px] overflow-y-auto p-1">
+                      {renderGroup("running", t.runGroupRunning, runningTabs)}
+                      {renderGroup("queued", t.runStateQueued, queuedTabs)}
+                      {renderGroup("preparing", t.runStatePending, pendingTabs)}
+                      {renderGroup("idle", t.runGroupIdle, idleTabs)}
+                    </div>
+                    <div className="flex h-8 items-center justify-between border-t border-border-soft px-2.5 text-[11px] text-muted-foreground">
+                      <span>
+                        {t.runLimitHint.replace(
+                          "{count}",
+                          String(maxConcurrentRuns),
+                        )}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <kbd className="rounded border border-border bg-card px-1 py-px font-mono text-[10px] leading-4 text-muted-foreground">
+                          Ctrl R
+                        </kbd>
+                      </span>
+                    </div>
+                  </>
+                )}
               </div>,
               document.body,
             )}

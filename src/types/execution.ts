@@ -17,6 +17,57 @@ export interface BranchProgressState {
   status: "executing" | "completed" | "error";
 }
 
+/** One step's state inside the current run (design 086). */
+export type StepExecutionStatus =
+  | "pending"
+  | "running"
+  | "done"
+  | "error"
+  | "skipped";
+
+export interface BranchStepState {
+  id: string;
+  name: string;
+  status: StepExecutionStatus;
+}
+
+export type BranchRunStatus =
+  | "pending"
+  | "running"
+  | "done"
+  | "error"
+  | "cancelled"
+  | "skipped";
+
+/**
+ * One branch of the current run, shown in the bottom run panel and projected
+ * onto the canvas nodes. Only selected branches get an entry.
+ */
+export interface BranchRunState {
+  /** Original index in the execution plan (stable across re-runs). */
+  index: number;
+  steps: BranchStepState[];
+  status: BranchRunStatus;
+  currentStepId?: string;
+  startedAt?: number;
+  durationMs?: number;
+  output?: string;
+  error?: string;
+}
+
+/** Lightweight branch list handed to the Execute menu (design 086). */
+export interface BranchSummary {
+  index: number;
+  stepIds: string[];
+  stepNames: string[];
+}
+
+export interface TabBranches {
+  branches: BranchSummary[];
+  /** The tab's output step path, when it has one. */
+  outputPath?: string;
+}
+
 /** Shared state for the S6 "several writers target one output file" gate. */
 export interface OverwriteConfirm {
   branchCount: number;
@@ -41,6 +92,12 @@ export interface ResultPreview {
   rows: string[][];
   totalRows: number;
   truncated: boolean;
+  /** Original plan index of the branch that produced this result (design 086). */
+  branchIndex?: number;
+  /** Wall time of that branch. */
+  durationMs?: number;
+  /** Failure text when the branch did not produce a table. */
+  error?: string;
 }
 
 /** One variable awaiting a runtime value before execution. */
@@ -66,6 +123,12 @@ export interface PendingRun {
   currentPipeline: PipelineStep[];
   currentTab: PipelineTab;
   inputFile: string;
+  /**
+   * Branches the user picked in the Execute menu (design 086). `undefined`
+   * means "all branches" and keeps the legacy overwrite gate for callers such
+   * as Ctrl+R; an explicit array means the picker already showed the risk.
+   */
+  selectedBranchIndexes?: number[];
 }
 
 /**
@@ -95,6 +158,12 @@ export interface RunSession {
   state: RunState;
   /** Current branch progress, shown by the canvas pill only for this tab. */
   branch: BranchProgressState | null;
+  /** Branches selected for this run, in plan order (design 086). */
+  branches?: BranchRunState[];
+  /** Branches the user did not select; enables the "run remaining" hint. */
+  unselectedBranchCount?: number;
+  /** Their original plan indexes, so "run remaining" can re-select them. */
+  unselectedBranchIndexes?: number[];
   /** The pill stays visible for a few seconds after the run ends. */
   showProgress: boolean;
   startedAt: number;
@@ -123,6 +192,14 @@ export interface RunContext {
   /** Per-run frontend cancel flag (the backend holds the matching one). */
   isCancelled: () => boolean;
   onProgress: (value: BranchProgressState | null) => void;
+  /** Patch one selected branch's run state (design 086). */
+  onBranchState: (index: number, patch: Partial<BranchRunState>) => void;
+  /** Patch one step inside a selected branch. */
+  onStepState: (
+    branchIndex: number,
+    stepId: string,
+    status: StepExecutionStatus,
+  ) => void;
   /** Append a log line already tagged with this run's tab. */
   log: (type: LogEntry["type"], message: string) => void;
 }

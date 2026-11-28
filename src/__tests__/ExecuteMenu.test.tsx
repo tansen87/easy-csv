@@ -191,6 +191,84 @@ describe("run panel (design 052)", () => {
     ).toEqual(["a", "c"]);
   });
 
+  it("opens the branch picker for a multi-branch tab and runs the kept selection", () => {
+    const { button, props } = renderMenu({
+      branchesByTab: {
+        a: {
+          branches: [
+            { index: 0, stepIds: ["s1", "s2"], stepNames: ["filter", "groupby"] },
+            { index: 1, stepIds: ["s1", "s3"], stepNames: ["filter", "sort"] },
+            { index: 2, stepIds: ["s1", "s4"], stepNames: ["filter", "dedup"] },
+          ],
+          outputPath: "out/result.csv",
+        },
+      },
+    });
+    fireEvent.click(button);
+
+    const row = rowEl("a")!;
+    expect(row.textContent).toContain(copy.runPickBranches);
+    const open = row.querySelector("button")!;
+    fireEvent.click(open);
+
+    const branchRows = Array.from(
+      document.querySelectorAll<HTMLElement>("[data-branch-row]"),
+    );
+    expect(branchRows).toHaveLength(3);
+    // Default is all selected.
+    expect(
+      branchRows.every((branchRow) => branchRow.getAttribute("aria-checked") === "true"),
+    ).toBe(true);
+
+    fireEvent.click(branchRows[1]);
+    fireEvent.click(branchRows[2]);
+
+    const runOne = Array.from(document.querySelectorAll("button")).find(
+      (candidate) => candidate.textContent === "Run 1 selected",
+    );
+    expect(runOne).toBeTruthy();
+    fireEvent.click(runOne!);
+    expect(props.onRunTab).toHaveBeenCalledWith("a", [0]);
+  });
+
+  it("keeps a single-branch tab on the one-click path", () => {
+    const { button, props } = renderMenu({
+      branchesByTab: {
+        a: {
+          branches: [
+            { index: 0, stepIds: ["s1"], stepNames: ["filter"] },
+          ],
+        },
+      },
+    });
+    fireEvent.click(button);
+    const row = rowEl("a")!;
+    expect(row.textContent).toContain(copy.execute);
+    expect(row.textContent).not.toContain(copy.runPickBranches);
+    fireEvent.click(row);
+    expect(props.onRunTab).toHaveBeenCalledWith("a");
+  });
+
+  it("Escape in the branch picker returns to the tab list without closing the menu", () => {
+    const { button } = renderMenu({
+      branchesByTab: {
+        a: {
+          branches: [
+            { index: 0, stepIds: ["s1"], stepNames: ["filter"] },
+            { index: 1, stepIds: ["s2"], stepNames: ["sort"] },
+          ],
+        },
+      },
+    });
+    fireEvent.click(button);
+    fireEvent.click(rowEl("a")!.querySelector("button")!);
+    expect(document.querySelector("[data-branch-row]")).not.toBeNull();
+
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(document.querySelector("[data-branch-row]")).toBeNull();
+    expect(rowEl("a")).not.toBeNull();
+  });
+
   it("re-orders the idle group when the current tab changes", () => {
     const { button } = renderMenu({ currentTabId: "b" });
     fireEvent.click(button);

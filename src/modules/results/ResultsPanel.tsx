@@ -83,17 +83,32 @@ export const ResultMeta = React.memo(function ResultMeta({
   );
 
   const meta = useMemo(() => {
+    if (result.error) return t.runStateFailed;
     const template = result.truncated
       ? t.resultRowsColsTruncated
       : t.resultRowsCols;
     return template
       .replace("{rows}", String(result.totalRows))
       .replace("{cols}", String(result.headers.length));
-  }, [result.headers.length, result.totalRows, result.truncated, t]);
+  }, [
+    result.error,
+    result.headers.length,
+    result.totalRows,
+    result.truncated,
+    t,
+  ]);
 
   return (
     <>
       <div className="flex min-w-0 flex-1 items-center gap-1">
+        {result.branchIndex !== undefined && (
+          <span className="shrink-0 rounded-[3px] bg-primary/10 px-1 py-px font-mono text-[9.5px] leading-4 text-primary">
+            {t.resultBranchLabel.replace(
+              "{index}",
+              String(result.branchIndex + 1).padStart(2, "0"),
+            )}
+          </span>
+        )}
         {result.steps.length > 0 ? (
           result.steps.map((step, stepIndex) => (
             <React.Fragment key={`${step}-${stepIndex}`}>
@@ -134,6 +149,7 @@ export const ResultMeta = React.memo(function ResultMeta({
         </span>
       )}
 
+      {!result.error && (
       <div className="relative flex shrink-0 items-center" ref={menuRef}>
         {/* The app's tooltip, not a native `title`: same delay, size and
             placement as every other icon button in the dock. */}
@@ -190,6 +206,7 @@ export const ResultMeta = React.memo(function ResultMeta({
           </div>
         )}
       </div>
+      )}
     </>
   );
 });
@@ -207,6 +224,24 @@ interface ResultsPanelProps {
 export const ResultsPanel = React.memo(function ResultsPanel({
   result,
 }: ResultsPanelProps) {
+  const { t } = useLanguage();
+  if (result.error) {
+    return (
+      <div
+        className="flex min-h-0 flex-1 items-start justify-center p-6"
+        data-testid="results-panel"
+      >
+        <div className="max-w-[560px] rounded-md border border-danger/30 bg-danger/5 px-4 py-3">
+          <div className="text-[11px] font-medium text-danger">
+            {t.runStateFailed}
+          </div>
+          <p className="mt-1 break-words font-mono text-[11px] leading-relaxed text-foreground">
+            {result.error}
+          </p>
+        </div>
+      </div>
+    );
+  }
   return (
     <ScrollArea className="min-h-0 flex-1" data-testid="results-panel">
       <ResultTable headers={result.headers} rows={result.rows} />

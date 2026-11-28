@@ -94,6 +94,8 @@ export interface RunPipelineDeps {
   setShowChartPanel: (value: boolean) => void;
   /** Result previews of one tab. */
   setTabResultPreview: (tabId: string, previews: ResultPreview[]) => void;
+  /** Mark branches that never started as skipped after a whole-run cancel. */
+  skipPendingBranches?: (runId: RunId) => void;
   trackLineage?: (
     steps: PipelineStep[],
     edges: PipelineEdge[],
