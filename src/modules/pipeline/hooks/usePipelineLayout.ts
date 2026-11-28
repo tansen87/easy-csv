@@ -1,8 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import type { Dispatch, RefObject, SetStateAction } from "react";
 import type { Edge, Node } from "reactflow";
 import type { PipelineStep } from "@/types/xan";
-import type { ResultPreview } from "@/types/execution";
 import { getLayoutedElements } from "@/modules/pipeline/lib/layout";
 
 interface UsePipelineLayoutArgs {
@@ -15,7 +14,6 @@ interface UsePipelineLayoutArgs {
   inputFileName?: string;
   savedEdges?: PipelineStep extends never ? never : any[];
   savedInputPosition?: { x: number; y: number };
-  resultPreview?: ResultPreview[];
   delimiter?: string;
   delimiterMode?: string;
   delimiterSource?: string;
@@ -68,7 +66,6 @@ export function usePipelineLayout({
   inputFileName,
   savedEdges,
   savedInputPosition,
-  resultPreview,
   delimiter,
   delimiterMode,
   delimiterSource,
@@ -96,19 +93,6 @@ export function usePipelineLayout({
   const lastLayoutResetRef = useRef(layoutResetKey ?? 0);
   const onLayoutAppliedRef = useRef(onLayoutApplied);
   onLayoutAppliedRef.current = onLayoutApplied;
-
-  // Result preview nodes the user dismissed (removed from the canvas)
-  const [dismissedResults, setDismissedResults] = useState<Set<string>>(
-    new Set(),
-  );
-
-  // When a fresh set of results arrives (new execution), clear previous
-  // dismissal records so every new run shows its result nodes by default.
-  useEffect(() => {
-    if (resultPreview && resultPreview.length > 0) {
-      setDismissedResults(new Set());
-    }
-  }, [resultPreview]);
 
   // Re-compute layout when data changes (not callbacks)
   useEffect(() => {
@@ -175,52 +159,7 @@ export function usePipelineLayout({
       return withPosition;
     });
 
-    // Inject result preview nodes (F1) to the right of the pipeline graph.
-    // Preserve an existing result node's position so it isn't pushed around
-    // when other nodes are dragged (which re-triggers this layout effect).
-    const existingResultPos = new Map<string, { x: number; y: number }>();
-    for (const n of nodes) {
-      if (n.type === "resultTableNode" && n.position) {
-        existingResultPos.set(n.id, n.position);
-      }
-    }
-    const maxRight = updatedNodes.reduce(
-      (m, n) => Math.max(m, (n.position?.x || 0) + (n.width || 0)),
-      0,
-    );
-    let fallbackY = 20;
-    const resultNodes = (resultPreview || [])
-      .filter((r) => !dismissedResults.has(r.id))
-      .map((r) => {
-        const position = existingResultPos.get(r.id) || {
-          x: maxRight + 60,
-          y: fallbackY,
-        };
-        // 426 (header 40 + table 360 + truncated banner 26) + 24 gap.
-        fallbackY += 450;
-        return {
-          id: r.id,
-          type: "resultTableNode" as const,
-          position,
-          data: {
-            headers: r.headers,
-            rows: r.rows,
-            label: r.label,
-            totalRows: r.totalRows,
-            truncated: r.truncated,
-            onClose: () =>
-              setDismissedResults((prev) => new Set(prev).add(r.id)),
-          },
-          selectable: false,
-          draggable: true,
-          dragHandle: ".result-node-header",
-          width: 520,
-          // Fixed node height (426 with the truncated banner, 400 without).
-          height: 426,
-        };
-      });
-
-    setNodes([...updatedNodes, ...resultNodes]);
+    setNodes(updatedNodes);
     setEdges(layoutedEdges);
     if (forceReset) {
       onLayoutAppliedRef.current?.(updatedNodes);
@@ -235,8 +174,6 @@ export function usePipelineLayout({
     inputFileName,
     savedEdges,
     savedInputPosition,
-    resultPreview,
-    dismissedResults,
     delimiter,
     delimiterMode,
     delimiterSource,

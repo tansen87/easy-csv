@@ -6,6 +6,12 @@ export function useUIState() {
   const [helpContent, setHelpContent] = useState("");
   const [helpCommandName, setHelpCommandName] = useState("");
   const [showLogPanel, setShowLogPanel] = useState(false);
+  /**
+   * Which tab the bottom dock shows (design 084). `logs` is always the first
+   * tab; results follow as `result:<index>`. Kept as a string so a stale index
+   * from a previous run can fall back instead of rendering an empty body.
+   */
+  const [bottomDockTab, setBottomDockTab] = useState<string>("logs");
   const [activeMenu, setActiveMenu] = useState<
     "file" | "edit" | "view" | "tools" | "help" | null
   >(null);
@@ -80,6 +86,8 @@ export function useUIState() {
     setHelpCommandName,
     showLogPanel,
     setShowLogPanel,
+    bottomDockTab,
+    setBottomDockTab,
     activeMenu,
     setActiveMenu,
     isMenuActivated,

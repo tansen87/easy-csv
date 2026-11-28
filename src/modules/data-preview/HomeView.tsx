@@ -37,7 +37,6 @@ interface HomeViewProps {
   onTabChange: (tabId: string) => void;
   onRemoveTab: (tabId: string) => void;
   onRenameTab: (tabId: string, name: string) => void;
-  resultPreview?: import("@/types/execution").ResultPreview[];
   onAddCommand: (
     command: XanCommand,
     initialParameters?: Record<string, any>,
@@ -118,7 +117,6 @@ export const HomeView = React.memo(function HomeView({
   onTabChange,
   onRemoveTab,
   onRenameTab,
-  resultPreview,
   onAddCommand,
   onStepClick,
   onStepUpdate,
@@ -337,7 +335,6 @@ export const HomeView = React.memo(function HomeView({
           rows={data}
           columnWidths={columnWidths}
           inputFileName={inputFileName}
-          resultPreview={resultPreview}
           onStepsChange={(newPipeline) => {
             if (onPipelineReorder && selectedTabId) {
               onPipelineReorder(selectedTabId, newPipeline);

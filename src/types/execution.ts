@@ -30,10 +30,13 @@ export interface OverwriteConfirm {
   otherTabName?: string;
 }
 
-/** Parsed execution result shown as a canvas table node. */
+/** Parsed execution result shown in the bottom results dock (design 084). */
 export interface ResultPreview {
   id: string;
+  /** Legacy single-line label (`Result: a → b`). The dock renders `steps`. */
   label: string;
+  /** Step names along the branch, in execution order. */
+  steps: string[];
   headers: string[];
   rows: string[][];
   totalRows: number;

@@ -412,6 +412,15 @@ export interface Translations {
   mouseLeft: string;
   mouseRight: string;
 
+  // Results dock (design 084)
+  results: string;
+  /** `{rows}` / `{cols}` placeholders. */
+  resultRowsCols: string;
+  resultRowsColsTruncated: string;
+  /** `{n}` placeholder: preview row count, never the total. */
+  resultTruncatedRows: string;
+  resultEmpty: string;
+
   // LogPanel
   logs: string;
   noLogsYet: string;
@@ -484,6 +493,7 @@ export interface Translations {
 
   // Result preview
   copyCsv: string;
+  copyFormat: string;
   copyMarkdown: string;
   resultTruncated: string;
 

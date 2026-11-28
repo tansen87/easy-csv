@@ -69,6 +69,7 @@ export const enCommon = {
   update: "Update",
   collapsePanel: "Collapse",
   copyCsv: "Copy as CSV",
+  copyFormat: "Choose a format",
   copyMarkdown: "Copy as Markdown table",
   resultTruncated:
     "Result truncated to first rows; use an output/to step to export the full data.",

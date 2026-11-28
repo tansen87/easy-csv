@@ -64,6 +64,8 @@ interface UseExecutionProps {
   ) => void;
   setTabs: Dispatch<SetStateAction<PipelineTab[]>>;
   setShowLogPanel: (value: boolean) => void;
+  /** Open the bottom dock on the results tab for a tab that just produced some. */
+  openResults?: (tabId: string) => void;
   setShowChartPanel: (value: boolean) => void;
   /** Chart of one tab. */
   setTabChart: (tabId: string, chart: TabChartState | null) => void;
@@ -105,6 +107,7 @@ export function useExecution({
   addLog,
   setTabs,
   setShowLogPanel,
+  openResults,
   setShowChartPanel,
   setTabChart,
   formatDateTime,
@@ -287,6 +290,7 @@ export function useExecution({
         openLogsDir: t.logOpenDir,
       },
       setShowLogPanel,
+      openResults,
       autoShowLogPanel,
       requestOverwritePrompt: (runId, data) =>
         enqueuePrompt({ kind: "overwrite", runId, data }),
@@ -316,6 +320,7 @@ export function useExecution({
       saveVersion,
       setShowChartPanel,
       setShowLogPanel,
+      openResults,
       setTabChart,
       setTabResultPreview,
       showToast,

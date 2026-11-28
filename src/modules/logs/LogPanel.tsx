@@ -15,12 +15,15 @@ import {
 } from "lucide-react";
 import React, {
   useCallback,
+  useContext,
   useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
   useState,
 } from "react";
+import { createPortal } from "react-dom";
+import { DockHeaderSlotContext } from "@/components/layout/dockSlots";
 import { ScrollArea } from "@/components/ui/ScrollArea";
 import { Button } from "@/components/ui/Button";
 import { Tooltip } from "@/components/ui/Tooltip";
@@ -63,6 +66,18 @@ interface LogPanelProps {
    * design 076). Without it the drawer slid underneath the docked panels.
    */
   rightInset?: number;
+  /**
+   * Design 084: render as the body of `BottomDock` instead of owning the
+   * drawer shell (fixed geometry, resize grip, maximize). The tab strip above
+   * supplies the title and the close/maximize buttons.
+   */
+  embedded?: boolean;
+  /**
+   * Embedded only: whether this panel's tab is the one on screen. The toolbar
+   * is portaled into the dock's header row, so it must not show while another
+   * tab is active.
+   */
+  embeddedActive?: boolean;
 }
 
 /** Severity dot, the only place colour appears in the list. */
@@ -128,8 +143,11 @@ export const LogPanel = React.memo(function LogPanel({
   selectedTabId,
   tabs,
   rightInset = 0,
+  embedded = false,
+  embeddedActive = true,
 }: LogPanelProps) {
   const { t } = useLanguage();
+  const headerSlot = useContext(DockHeaderSlotContext);
   const [isMaximized, setIsMaximized] = useState(false);
   const [height, setHeight] = useState(
     dockState?.height && dockState.height >= MIN_HEIGHT
@@ -147,12 +165,21 @@ export const LogPanel = React.memo(function LogPanel({
   /** 1-based position shown in the search box (unslop 071-02: "1/3"). */
   const [hitIndex, setHitIndex] = useState(0);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const filtersRef = useRef<HTMLDivElement>(null);
+  /** Filters scroll when the dock is narrow; the fade says "more to the right". */
+  const [filtersOverflow, setFiltersOverflow] = useState(false);
   const copyTimerRef = useRef<number | null>(null);
   const groupCopyTimerRef = useRef<number | null>(null);
   const hitIndexRef = useRef(0);
   const resizeRef = useRef<{ startY: number; startHeight: number } | null>(
     null,
   );
+
+  useEffect(() => {
+    const element = filtersRef.current;
+    if (!element) return;
+    setFiltersOverflow(element.scrollWidth > element.clientWidth + 1);
+  });
 
   const tabNameById = useMemo(
     () => new Map((tabs ?? []).map((tab) => [tab.id, tab.name])),
@@ -313,17 +340,19 @@ export const LogPanel = React.memo(function LogPanel({
 
   // Publish the rendered height so canvas overlays anchored to the bottom (the
   // status line in `FlowPanel`) ride above the drawer, including mid-drag.
-  // `0` while hidden or maximized - a maximized drawer already covers the canvas.
+  // `0` while hidden or maximized - a maximized drawer already covers the
+  // canvas. Embedded in `BottomDock` (design 084), the dock owns this variable.
   useEffect(() => {
+    if (embedded) return;
     const root = document.documentElement;
     root.style.setProperty(
-      "--log-drawer-height",
+      "--bottom-dock-height",
       `${isVisible && !isMaximized ? height : 0}px`,
     );
     return () => {
-      root.style.removeProperty("--log-drawer-height");
+      root.style.removeProperty("--bottom-dock-height");
     };
-  }, [isVisible, isMaximized, height]);
+  }, [embedded, isVisible, isMaximized, height]);
 
   /** Top-edge drag: up grows, down shrinks. Persisted on release. */
   const handleResizeStart = (e: React.PointerEvent) => {
@@ -407,62 +436,44 @@ export const LogPanel = React.memo(function LogPanel({
 
   let previousDay: string | null = null;
 
-  return (
-    <div
-      style={
-        isMaximized
-          ? {
-              left: 0,
-              right: 0,
-              top: APP_HEADER_HEIGHT,
-              height: `calc(100vh - ${APP_HEADER_HEIGHT}px)`,
-            }
-          : { left: 0, right: rightInset, bottom: 0, height }
-      }
-      // Maximized stays below the menu bar so 「查看」/「运行」 are still there to
-      // use while reading logs; the header sits at `z-chrome` for that reason.
-      className={`fixed z-floating flex flex-col overflow-hidden bg-card shadow-lg ${
-        isMaximized ? "w-full" : "rounded-t-lg border-x border-t border-border"
-      }`}
-      onContextMenu={(e) => e.preventDefault()}
-      data-testid="log-panel"
-    >
-      {/* Top edge: the resize grip (hidden while maximized). */}
-      {!isMaximized && (
-        <div
-          onPointerDown={handleResizeStart}
-          className="h-[5px] shrink-0 cursor-row-resize bg-transparent transition-colors hover:bg-primary/15"
-          aria-label={t.logResizeHint}
-          title={t.logResizeHint}
-        />
-      )}
-
-      {/* Title bar: identity, filters, search, actions. */}
-      <div className="flex h-8 shrink-0 items-center gap-2 border-b border-border px-3">
-        <div className="flex select-none items-center gap-2">
-          <span className="text-[13px] font-medium text-foreground">
-            {t.logs}
-          </span>
-          <span className="font-mono text-[10.5px] tabular-nums text-muted-foreground">
-            {hitCount !== null
-              ? t.logHits
-                  .replace("{n}", String(hitCount))
-                  .replace("{total}", String(logs.length))
-              : `${logs.length}${t.logCountUnit ? ` ${t.logCountUnit}` : ""}`}
-          </span>
-        </div>
+  /** Filters + search + actions, shared by the standalone drawer and the
+   *  dock's header row (portaled there). */
+  const toolbar = (
+    <>
+        {!embedded && (
+          <div className="flex select-none items-center gap-2">
+            <span className="text-[13px] font-medium text-foreground">
+              {t.logs}
+            </span>
+            <span className="font-mono text-[10.5px] tabular-nums text-muted-foreground">
+              {hitCount !== null
+                ? t.logHits
+                    .replace("{n}", String(hitCount))
+                    .replace("{total}", String(logs.length))
+                : `${logs.length}${t.logCountUnit ? ` ${t.logCountUnit}` : ""}`}
+            </span>
+          </div>
+        )}
 
         {logs.length > 0 && (
+          // Filters scroll instead of squeezing: at narrow dock widths (AI
+          // panel open) the search and the action icons must stay usable.
           <>
             <div
-              className="flex items-center gap-1"
+            ref={filtersRef}
+            className={`log-filter-scroll flex min-w-0 items-center gap-2 overflow-x-auto ${
+              filtersOverflow ? "log-filter-fade" : ""
+            }`}
+          >
+            <div
+              className="flex shrink-0 items-center gap-1"
               onMouseDown={(e) => e.stopPropagation()}
             >
               <button
                 type="button"
                 data-level="all"
                 onClick={() => setActiveFilter("all")}
-                className={`flex h-[22px] items-center gap-1 rounded-full px-2 text-[10.5px] transition-colors ${
+                className={`flex h-[22px] shrink-0 items-center gap-1 whitespace-nowrap rounded-full px-2 text-[10.5px] transition-colors ${
                   activeFilter === "all"
                     ? "border border-border-soft bg-muted font-medium text-foreground"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -480,7 +491,7 @@ export const LogPanel = React.memo(function LogPanel({
                     type="button"
                     data-level={type}
                     onClick={() => setActiveFilter(type)}
-                    className={`flex h-[22px] items-center gap-1 rounded-full px-2 text-[10.5px] transition-colors ${
+                    className={`flex h-[22px] shrink-0 items-center gap-1 whitespace-nowrap rounded-full px-2 text-[10.5px] transition-colors ${
                       activeFilter === type
                         ? "border border-border-soft bg-muted font-medium text-foreground"
                         : "text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -497,11 +508,12 @@ export const LogPanel = React.memo(function LogPanel({
                 ),
               )}
             </div>
+          </div>
 
-            <div
-              className="ml-1 flex h-[22px] items-center overflow-hidden rounded-full border border-border"
-              onMouseDown={(e) => e.stopPropagation()}
-            >
+          <div
+            className="ml-1 flex h-[22px] shrink-0 items-center overflow-hidden whitespace-nowrap rounded-full border border-border @max-[700px]:hidden"
+            onMouseDown={(e) => e.stopPropagation()}
+          >
               <button
                 type="button"
                 data-scope="current"
@@ -531,7 +543,7 @@ export const LogPanel = React.memo(function LogPanel({
         )}
 
         <div
-          className="ml-auto flex h-[26px] w-[190px] items-center gap-1.5 rounded-md border border-border bg-background px-2 focus-within:border-primary"
+          className="ml-auto flex h-[26px] min-w-[96px] max-w-[190px] flex-1 basis-[190px] items-center gap-1.5 rounded-md border border-border bg-background px-2 focus-within:border-primary"
           onMouseDown={(e) => e.stopPropagation()}
         >
           <Search className="h-3 w-3 shrink-0 text-muted-foreground" />
@@ -551,7 +563,7 @@ export const LogPanel = React.memo(function LogPanel({
           )}
         </div>
 
-        <div className="flex items-center gap-0.5">
+        <div className="flex shrink-0 items-center gap-0.5">
           {onExport && (
             <Tooltip content={t.logExport}>
               <Button
@@ -610,7 +622,7 @@ export const LogPanel = React.memo(function LogPanel({
               size="xs"
               aria-label={isMaximized ? t.restore : t.maximize}
               onClick={() => setIsMaximized(!isMaximized)}
-              className="h-7 w-7 p-0"
+              className={embedded ? "hidden h-7 w-7 p-0" : "h-7 w-7 p-0"}
             >
               {isMaximized ? (
                 <Minimize2 className="h-3.5 w-3.5" />
@@ -625,13 +637,66 @@ export const LogPanel = React.memo(function LogPanel({
               size="xs"
               aria-label={t.close}
               onClick={onClose}
-              className="h-7 w-7 p-0"
+              className={embedded ? "hidden h-7 w-7 p-0" : "h-7 w-7 p-0"}
             >
               <X className="h-3.5 w-3.5" />
             </Button>
           </Tooltip>
         </div>
-      </div>
+      
+    </>
+  );
+
+  return (
+    <div
+      style={
+        embedded
+          ? undefined
+          : isMaximized
+            ? {
+                left: 0,
+                right: 0,
+                top: APP_HEADER_HEIGHT,
+                height: `calc(100vh - ${APP_HEADER_HEIGHT}px)`,
+              }
+            : { left: 0, right: rightInset, bottom: 0, height }
+      }
+      // Maximized stays below the menu bar so 「查看」/「运行」 are still there to
+      // use while reading logs; the header sits at `z-chrome` for that reason.
+      className={
+        embedded
+          ? "flex min-h-0 flex-1 flex-col overflow-hidden bg-card"
+          : `fixed z-floating flex flex-col overflow-hidden bg-card shadow-lg ${
+              isMaximized
+                ? "w-full"
+                : "rounded-t-lg border-x border-t border-border"
+            }`
+      }
+      onContextMenu={(e) => e.preventDefault()}
+      data-testid="log-panel"
+    >
+      {/* Top edge: the resize grip (hidden while maximized). */}
+      {!embedded && !isMaximized && (
+        <div
+          onPointerDown={handleResizeStart}
+          className="h-[5px] shrink-0 cursor-row-resize bg-transparent transition-colors hover:bg-primary/15"
+          aria-label={t.logResizeHint}
+          title={t.logResizeHint}
+        />
+      )}
+
+      {/* Toolbar: level chips, tab scope, search, actions. Inside the dock it
+          is portaled into the dock's single header row (design 084 feedback);
+          the filter state stays here. */}
+      {embedded ? (
+        embeddedActive && headerSlot
+          ? createPortal(toolbar, headerSlot)
+          : null
+      ) : (
+        <div className="flex h-8 shrink-0 items-center gap-2 border-b border-border px-3">
+          {toolbar}
+        </div>
+      )}
 
       <ScrollArea ref={scrollAreaRef} className="min-h-0 flex-1">
         {filtered.length === 0 ? (

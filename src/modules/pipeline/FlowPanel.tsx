@@ -128,7 +128,6 @@ interface FlowPanelProps {
   columnWidths: Record<number, number>;
   /** Basename of the input file, shown in the table node footer. */
   inputFileName?: string;
-  resultPreview?: import("@/types/execution").ResultPreview[];
   onStepsChange: (steps: PipelineStep[]) => void;
   onStepClick: (step: PipelineStep) => void;
   onStepAliasUpdate: (stepId: string, alias: string) => void;
@@ -176,7 +175,6 @@ export function FlowPanel({
   rows,
   columnWidths,
   inputFileName,
-  resultPreview,
   onStepsChange,
   onStepClick,
   onStepAliasUpdate,
@@ -444,12 +442,8 @@ export function FlowPanel({
   } = connect;
 
   // Copy/paste clipboard - owned by useStepClipboard
-  const {
-    clipboardRef,
-    copySteps,
-    handleCopySelected,
-    handlePasteClipboard,
-  } = useStepClipboard({
+  const { clipboardRef, copySteps, handleCopySelected, handlePasteClipboard } =
+    useStepClipboard({
       steps,
       edges,
       selectedNodeIds,
@@ -458,7 +452,7 @@ export function FlowPanel({
       onEdgesChange,
     });
 
-  // Layout reconciliation + result-preview injection - owned by usePipelineLayout
+  // Layout reconciliation - owned by usePipelineLayout
   usePipelineLayout({
     hasTable,
     steps,
@@ -468,7 +462,6 @@ export function FlowPanel({
     inputFileName,
     savedEdges,
     savedInputPosition,
-    resultPreview,
     delimiter,
     delimiterMode,
     delimiterSource,
@@ -801,12 +794,8 @@ export function FlowPanel({
         if (drag.moved) {
           const zoom = reactFlowInstance.current?.getZoom?.() ?? 1;
           const position = {
-            x:
-              drag.startPosition.x +
-              (e.clientX - drag.startClientX) / zoom,
-            y:
-              drag.startPosition.y +
-              (e.clientY - drag.startClientY) / zoom,
+            x: drag.startPosition.x + (e.clientX - drag.startClientX) / zoom,
+            y: drag.startPosition.y + (e.clientY - drag.startClientY) / zoom,
           };
           const nextNodes = nodesRef.current.map((n) =>
             n.id === drag.nodeId ? { ...n, position } : n,
@@ -1247,11 +1236,7 @@ export function FlowPanel({
         // Left drag follows the left tool: box select, or pan the view.
         // Swapped: the right button drives the left tool.
         panOnDrag={
-          leftTool === "pan"
-            ? swapMouseButtons
-              ? [1, 2]
-              : [0, 1]
-            : [1]
+          leftTool === "pan" ? (swapMouseButtons ? [1, 2] : [0, 1]) : [1]
         }
         panActivationKeyCode="Space"
         selectionOnDrag={!swapMouseButtons && leftTool === "select"}
@@ -1528,43 +1513,43 @@ export function FlowPanel({
           and pointer-transparent except its buttons so a marquee / cut / pan
           started under it still works. Hidden while a canvas gesture runs. */}
       {showSelectionTray && (
-          <div
-            className="pointer-events-none absolute left-1/2 z-20 -translate-x-1/2"
-            style={{ bottom: "calc(var(--log-drawer-height, 0px) + 8px)" }}
-          >
-            <div className="quick-enter pointer-events-none flex h-7 items-center rounded-md border border-border bg-card px-0.5">
-              <span className="flex items-baseline gap-1 px-1.5">
-                <span className="font-mono text-[11px] font-medium tabular-nums text-foreground">
-                  {selectedNodeIds.size}
-                </span>
-                <span className="text-[10px] text-muted-foreground">
-                  {t.selectionUnit}
-                </span>
+        <div
+          className="pointer-events-none absolute left-1/2 z-20 -translate-x-1/2"
+          style={{ bottom: "calc(var(--bottom-dock-height, 0px) + 8px)" }}
+        >
+          <div className="quick-enter pointer-events-none flex h-7 items-center rounded-md border border-border bg-card px-0.5">
+            <span className="flex items-baseline gap-1 px-1.5">
+              <span className="font-mono text-[11px] font-medium tabular-nums text-foreground">
+                {selectedNodeIds.size}
               </span>
-              <span className="h-3.5 w-px bg-border/70" />
-              <button
-                type="button"
-                onClick={handleCopySelected}
-                className="pointer-events-auto ml-0.5 flex h-[22px] items-center gap-1.5 rounded-[4px] px-1.5 text-[11px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-              >
-                {t.copy}
-                <kbd className="rounded-[3px] border border-border bg-background px-1 py-0.5 font-mono text-[9px] leading-none text-muted-foreground/70">
-                  {modKeySymbol()} C
-                </kbd>
-              </button>
-              <button
-                type="button"
-                onClick={handleDeleteSelected}
-                className="pointer-events-auto flex h-[22px] items-center gap-1.5 rounded-[4px] px-1.5 text-[11px] text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-              >
-                {t.deleteSteps}
-                <kbd className="rounded-[3px] border border-border bg-background px-1 py-0.5 font-mono text-[9px] leading-none text-muted-foreground/70">
-                  Del
-                </kbd>
-              </button>
-            </div>
+              <span className="text-[10px] text-muted-foreground">
+                {t.selectionUnit}
+              </span>
+            </span>
+            <span className="h-3.5 w-px bg-border/70" />
+            <button
+              type="button"
+              onClick={handleCopySelected}
+              className="pointer-events-auto ml-0.5 flex h-[22px] items-center gap-1.5 rounded-[4px] px-1.5 text-[11px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              {t.copy}
+              <kbd className="rounded-[3px] border border-border bg-background px-1 py-0.5 font-mono text-[9px] leading-none text-muted-foreground/70">
+                {modKeySymbol()} C
+              </kbd>
+            </button>
+            <button
+              type="button"
+              onClick={handleDeleteSelected}
+              className="pointer-events-auto flex h-[22px] items-center gap-1.5 rounded-[4px] px-1.5 text-[11px] text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+            >
+              {t.deleteSteps}
+              <kbd className="rounded-[3px] border border-border bg-background px-1 py-0.5 font-mono text-[9px] leading-none text-muted-foreground/70">
+                Del
+              </kbd>
+            </button>
           </div>
-        )}
+        </div>
+      )}
 
       {showGestureLegend && !showSelectionTray && (
         <GestureLegend
@@ -1578,7 +1563,7 @@ export function FlowPanel({
           through the height the drawer publishes on `:root`. */}
       <div
         className="absolute left-3 z-50 flex items-center gap-3 text-[11px] text-muted-foreground/60 select-none pointer-events-none"
-        style={{ bottom: "calc(var(--log-drawer-height, 0px) + 8px)" }}
+        style={{ bottom: "calc(var(--bottom-dock-height, 0px) + 8px)" }}
         data-tick={tick}
       >
         <span className="flex items-center gap-1">

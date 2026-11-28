@@ -1,0 +1,572 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>原型 084-01 · 结果表重设计 · 方案 A 画布内锚定卡</title>
+<style>
+  :root{
+    --font:"Inter","Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Consolas,monospace;
+
+    --bg:#fff;
+    --fg:oklch(0.145 0 0);
+    --ink-88:color-mix(in oklab, oklch(0.145 0 0) 88%, #fff);
+    --ink-4:color-mix(in oklab, oklch(0.145 0 0) 4%, transparent);
+    --card:#fff;
+    --muted:oklch(0.97 0 0);
+    --muted-fg:oklch(0.556 0 0);
+    --muted-fg-2:oklch(0.66 0 0);
+    --muted-fg-3:oklch(0.76 0 0);
+    --border:oklch(0.922 0 0);
+    --border-soft:oklch(0.2 0.01 80 / 8%);
+    --border-strong:oklch(0.2 0.01 80 / 22%);
+    --nil:oklch(0.2 0.01 80 / 26%);
+
+    --brand:oklch(0.42 0.055 250);
+    --brand-ink:oklch(0.35 0.05 250);
+    --brand-6:color-mix(in oklab, oklch(0.42 0.055 250) 6%, transparent);
+    --brand-9:color-mix(in oklab, oklch(0.42 0.055 250) 9%, transparent);
+    --brand-12:color-mix(in oklab, oklch(0.42 0.055 250) 12%, transparent);
+    --chrome:color-mix(in oklab, oklch(0.42 0.055 250) 12%, #fff);
+    --chrome-border:color-mix(in oklab, oklch(0.42 0.055 250) 30%, transparent);
+
+    --stage:oklch(0.975 0.004 85);
+    --canvas-dot:oklch(0.2 0.01 80 / 11%);
+    --canvas-line:oklch(0.2 0.01 80 / 30%);
+    --shadow-card:0 1px 2px oklch(0.2 0.02 80 / 5%);
+    --shadow-win:0 24px 64px -34px oklch(0.2 0.02 80 / 34%),0 2px 6px oklch(0.2 0.02 80 / 6%);
+    --shadow-fly:0 16px 40px -20px oklch(0.2 0.02 80 / 28%),0 2px 6px oklch(0.2 0.02 80 / 6%);
+
+    --warning:oklch(0.55 0.1 72);
+    --success:oklch(0.52 0.09 150);
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--stage)}
+  body{font-family:var(--font);color:var(--fg);font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased}
+  .page{max-width:1320px;margin:0 auto;padding:56px 32px 104px}
+
+  .doc-head{display:grid;grid-template-columns:76px minmax(0,1fr);gap:24px;padding-bottom:26px;border-bottom:1px solid var(--border-strong)}
+  .doc-no{font-family:var(--mono);font-size:12px;color:var(--muted-fg);padding-top:6px;letter-spacing:.02em}
+  h1{margin:0 0 8px;font-size:27px;font-weight:500;line-height:1.28;letter-spacing:-.01em}
+  .lede{margin:0;max-width:780px;font-size:13.5px;color:var(--muted-fg)}
+  .decision{display:flex;gap:8px;margin:16px 0 0;padding:8px 12px;border-left:2px solid var(--brand);
+            background:var(--brand-6);font-size:12.5px;max-width:820px}
+  .decision b{font-weight:500}
+
+  .nav{display:flex;gap:4px;margin-top:18px}
+  .nav a{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 10px;border:1px solid var(--border);
+         border-radius:6px;font-size:11.5px;color:var(--muted-fg);text-decoration:none;background:#fff}
+  .nav a.on{border-color:var(--brand-border, var(--border-strong));background:var(--brand-9);color:var(--brand-ink)}
+  .nav a span{font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-3)}
+
+  section{margin-top:60px}
+  .sec-hd{display:flex;align-items:baseline;gap:10px;margin-bottom:6px}
+  .sec-no{font-family:var(--mono);font-size:11px;color:var(--brand)}
+  h2{margin:0;font-size:18px;font-weight:500;letter-spacing:-.005em}
+  .sec-note{margin:0 0 20px;max-width:820px;font-size:13px;color:var(--muted-fg)}
+  h3{margin:32px 0 12px;font-size:13.5px;font-weight:500}
+  p{margin:0 0 12px;font-size:13px;color:var(--muted-fg);max-width:820px}
+
+  kbd{display:inline-flex;align-items:center;justify-content:center;height:16px;min-width:16px;padding:0 4px;
+      border:1px solid var(--border);border-radius:3px;font-family:var(--mono);font-size:9.5px;line-height:1;color:var(--muted-fg-2)}
+  .i{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+  .i12{width:12px;height:12px}.i14{width:14px;height:14px}.i10{width:10px;height:10px}
+
+  .figure{position:relative;width:max-content;max-width:100%}
+  .cap{margin:10px 0 0;font-size:11.5px;color:var(--muted-fg-2);max-width:980px}
+  .cap b{font-weight:500;color:var(--fg)}
+
+  /* ── 结果卡（方案 A 定稿版式） ───────────────────────── */
+  .rt{position:relative;width:560px;background:#fff;border:1px solid var(--border);border-radius:10px;
+      box-shadow:var(--shadow-card);overflow:hidden}
+  .rt-hd{display:flex;align-items:center;gap:10px;height:44px;padding:0 8px 0 12px;border-bottom:1px solid var(--border-soft)}
+  .chain{display:flex;align-items:center;gap:5px;min-width:0;flex:1}
+  .step{display:flex;align-items:center;gap:6px;min-width:0}
+  .step .no{flex:none;font-family:var(--mono);font-size:9.5px;line-height:16px;color:var(--muted-fg-2);
+            background:var(--muted);border-radius:3px;padding:0 3px}
+  .step .nm{font-size:12px;color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:118px}
+  .sep{flex:none;font-size:10px;color:var(--muted-fg-3);line-height:1}
+  .rt-meta{flex:none;font-family:var(--mono);font-size:11px;color:var(--muted-fg-2);font-variant-numeric:tabular-nums}
+  .rt-acts{flex:none;display:flex;align-items:center;gap:2px}
+  .ibt{display:grid;place-items:center;width:24px;height:24px;border-radius:5px;color:var(--muted-fg-2)}
+  .ibt.hov{background:var(--ink-4);color:var(--fg)}
+  .ibt.copied{color:var(--success)}
+  .split{display:flex;align-items:center;gap:1px;height:24px;padding:0 4px 0 5px;border-radius:5px;color:var(--muted-fg-2)}
+  .split.hov{background:var(--ink-4);color:var(--fg)}
+  .split .cv{width:1px;height:10px;background:var(--border);margin:0 2px}
+
+  .ledger{width:100%;border-collapse:separate;border-spacing:0;table-layout:fixed}
+  .ledger th{position:sticky;top:0;z-index:2;height:32px;padding:0 12px;background:#fff;text-align:left;
+             font-size:11px;font-weight:500;color:var(--muted-fg);border-bottom:1px solid var(--border-strong);white-space:nowrap}
+  .ledger th.num{text-align:right}
+  .ledger td{height:32px;padding:0 12px;font-size:13px;color:var(--ink-88);border-bottom:1px solid var(--border-soft);
+             white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ledger td.num{text-align:right;font-family:var(--mono);font-size:12.5px;font-variant-numeric:tabular-nums;color:var(--fg)}
+  .ledger tr:last-child td{border-bottom:0}
+  .ledger tbody tr.hov td{background:var(--ink-4)}
+  .ledger .gut,.ledger th.gut{width:34px;padding:0 10px 0 0;text-align:right;font-family:var(--mono);
+             font-size:10.5px;color:var(--muted-fg-3);font-variant-numeric:tabular-nums}
+  .nil{display:inline-block;width:12px;height:1px;background:var(--nil);vertical-align:middle}
+  .rt-ft{display:flex;align-items:center;gap:8px;height:26px;padding:0 12px;border-top:1px solid var(--border-soft);
+         font-size:10.5px;color:var(--muted-fg-2)}
+  .rt-ft .spacer{margin-left:auto}
+  .rt-ft .warn{color:var(--warning)}
+  .hscroll{position:relative;height:6px;margin:0 12px 8px;border-radius:3px;background:color-mix(in oklab, var(--fg) 5%, transparent)}
+  .hscroll i{position:absolute;left:0;top:0;bottom:0;width:64%;border-radius:3px;background:color-mix(in oklab, var(--fg) 20%, transparent)}
+
+  /* 复制菜单 */
+  .pop{position:absolute;top:42px;right:8px;width:184px;padding:4px;background:#fff;border:1px solid var(--border);
+       border-radius:8px;box-shadow:var(--shadow-fly);z-index:5}
+  .pop .it{display:flex;align-items:center;gap:8px;height:28px;padding:0 8px;border-radius:5px;font-size:11.5px;color:var(--fg)}
+  .pop .it span{color:var(--muted-fg-2);font-family:var(--mono);font-size:9.5px}
+  .pop .it .k{margin-left:auto}
+  .pop .it.hov{background:var(--ink-4)}
+  .pop .it.on{color:var(--success)}
+
+  /* ── 现状复刻（对照用） ─────────────────────────────── */
+  .old{width:560px;height:400px;background:#fff;border:1px solid var(--border);border-radius:6px;overflow:hidden;
+       box-shadow:0 1px 2px oklch(0.2 0.02 80 / 5%)}
+  .old-hd{display:flex;align-items:center;gap:8px;height:40px;padding:0 12px;background:color-mix(in oklab, var(--muted) 50%, #fff)}
+  .old-hd .lb{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+  .old-hd .mt{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--muted-fg)}
+  .old-hd .b{font-family:var(--mono);font-size:10.5px;color:var(--muted-fg)}
+  .old-hd .x{font-size:11px;color:var(--muted-fg);margin-left:2px}
+  .old-t{width:520px;border-collapse:collapse;table-layout:fixed}
+  .old-t th{width:260px;height:29px;padding:0 8px;background:color-mix(in oklab, var(--muted) 40%, #fff);
+            border:1px solid oklch(0.92 0 0);font-size:12px;font-weight:600;text-align:left}
+  .old-t td{height:28px;padding:0 8px;border:1px solid oklch(0.92 0 0);font-size:12px;color:var(--muted-fg)}
+  .pair{display:flex;gap:28px;align-items:flex-start}
+  .pair .tag{display:flex;align-items:center;gap:8px;margin:0 0 8px;font-size:11.5px;color:var(--muted-fg)}
+  .pair .tag b{font-weight:500;color:var(--fg)}
+  .pair .tag .badge{font-family:var(--mono);font-size:9.5px;padding:1px 5px;border:1px solid var(--border);border-radius:3px;color:var(--muted-fg-2)}
+
+  /* 标注 */
+  .ann-w{position:relative;display:flex;gap:32px;align-items:flex-start}
+  .legend{width:420px;margin:0;padding:0;list-style:none}
+  .legend li{display:grid;grid-template-columns:18px minmax(0,1fr);gap:8px;padding:7px 0;border-bottom:1px solid var(--border-soft);
+             font-size:12px;color:var(--muted-fg);line-height:1.5}
+  .legend li:last-child{border-bottom:0}
+  .legend .n{font-family:var(--mono);font-size:9.5px;color:var(--brand-ink);width:16px;height:16px;line-height:14px;text-align:center;
+             border:1px solid var(--brand);border-radius:50%;margin-top:2px}
+  .legend b{color:var(--fg);font-weight:500}
+
+  /* ── 窗口 ───────────────────────────────────────────── */
+  .win{position:relative;width:1240px;height:720px;display:flex;flex-direction:column;background:var(--bg);
+       border:1px solid var(--border);border-radius:10px;overflow:hidden;box-shadow:var(--shadow-win)}
+  .bar{position:relative;flex:none;display:flex;align-items:center;height:36px;padding-left:16px;
+       background:var(--chrome);box-shadow:inset 0 -1px 0 var(--chrome-border)}
+  .brand{flex:none;padding-right:12px;font-size:12.5px;font-weight:500;line-height:1;color:var(--fg)}
+  .menus{display:flex;align-items:center;gap:0;flex:none}
+  .mbtn{height:26px;padding:0 12px;border-radius:6px;font-size:12px;font-weight:500;line-height:26px;color:var(--brand-ink)}
+  .field-wrap{position:absolute;left:50%;top:5px;transform:translateX(-50%);width:380px}
+  .field{display:grid;grid-template-columns:12px minmax(0,1fr) auto;align-items:center;gap:8px;height:26px;
+         padding:0 6px 0 10px;border:1px solid var(--border);border-radius:7px;background:var(--bg);color:var(--muted-fg-2)}
+  .field .prompt{font-family:var(--mono);font-size:13px;color:var(--brand);text-align:center;transform:translateY(-1px)}
+  .field .ph{font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .icons{margin-left:auto;display:flex;align-items:center;gap:2px;padding-right:0;flex:none}
+  .icon-btn{display:grid;place-items:center;width:28px;height:28px;border-radius:6px;color:var(--brand-ink)}
+  .icon-btn.on{background:var(--brand-12)}
+  .wctl{display:flex;margin-left:10px}
+  .wbtn{display:grid;place-items:center;width:46px;height:36px;color:var(--muted-fg);font-size:12px}
+
+  .body{flex:1;display:flex;min-height:0}
+  .main{flex:1;min-width:0;display:flex;flex-direction:column}
+  .tabstrip{flex:none;display:flex;align-items:center;gap:4px;height:34px;padding:0 10px;border-bottom:1px solid var(--border-soft)}
+  .tab{display:flex;align-items:center;gap:7px;height:26px;padding:0 8px 0 10px;border-radius:6px;font-size:11.5px;color:var(--muted-fg)}
+  .tab.on{background:var(--muted);color:var(--fg);font-weight:500}
+  .tab .x{color:var(--muted-fg-3)}
+  .canvas{position:relative;flex:1;overflow:hidden;background-color:var(--bg);
+          background-image:radial-gradient(var(--canvas-dot) 1px,transparent 1px);background-size:22px 22px}
+  .edges{position:absolute;inset:0;width:100%;height:100%}
+  .edges path{fill:none;stroke:var(--canvas-line);stroke-width:1.25}
+  .edges .anchor{stroke-dasharray:3 4;stroke:var(--brand);opacity:.55}
+  .rail{position:absolute;left:12px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:2px;
+        padding:3px;border:1px solid var(--border);border-radius:7px;background:var(--card);box-shadow:var(--shadow-card)}
+  .rail b{display:grid;place-items:center;width:24px;height:24px;border-radius:5px;color:var(--muted-fg-2)}
+  .tnode{position:absolute;background:var(--card);border:1px solid var(--border);border-radius:8px;
+         box-shadow:var(--shadow-card);overflow:hidden;width:182px}
+  .tnode .th{display:flex;align-items:center;gap:6px;height:26px;padding:0 9px;border-bottom:1px solid var(--border-soft);
+             font-family:var(--mono);font-size:10.5px;color:var(--fg)}
+  .tnode .th .st{font-family:var(--font);font-size:9.5px;color:var(--muted-fg-2);margin-left:auto}
+  .tnode .tb{padding:6px 9px 7px}
+  .tnode .kv{display:flex;align-items:center;gap:6px;height:16px;font-size:10px;color:var(--muted-fg)}
+  .tnode .kv b{font-family:var(--mono);font-size:9.5px;font-weight:400;color:var(--fg)}
+  .readout{position:absolute;top:10px;right:12px;display:flex;gap:10px;font-family:var(--mono);font-size:10px;
+           color:var(--muted-fg-2);font-variant-numeric:tabular-nums}
+  .statusline{position:absolute;left:12px;bottom:10px;display:flex;align-items:center;gap:10px;font-size:10px;color:var(--muted-fg-2)}
+  .statusline .sdot{width:5px;height:5px;border-radius:50%;background:var(--success)}
+  .canvas-card{position:absolute;left:40px;top:250px;width:560px}
+  .canvas-card .anchor-dot{position:absolute;width:5px;height:5px;border-radius:50%;background:var(--brand)}
+
+  .doc-t{width:100%;max-width:1080px;border-collapse:collapse;font-size:12.5px}
+  .doc-t th{text-align:left;font-weight:500;font-size:11px;color:var(--muted-fg-2);padding:8px 12px 8px 0;
+            border-bottom:1px solid var(--border-strong)}
+  .doc-t td{padding:9px 12px 9px 0;border-bottom:1px solid var(--border-soft);color:var(--muted-fg);vertical-align:top}
+  .doc-t td:first-child{color:var(--fg);white-space:nowrap}
+  code{font-family:var(--mono);font-size:11px;background:var(--muted);padding:1px 4px;border-radius:3px;color:var(--fg)}
+
+  ul{margin:0 0 12px;padding-left:18px;font-size:13px;color:var(--muted-fg);max-width:820px}
+  li{margin-bottom:6px}
+  li b{font-weight:500;color:var(--fg)}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M15 5.5A1.5 1.5 0 0 0 13.5 4H6a2 2 0 0 0-2 2v7.5A1.5 1.5 0 0 0 5.5 15"/></symbol>
+    <symbol id="i-chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
+    <symbol id="i-max" viewBox="0 0 24 24"><path d="M4 9V4h5M20 15v5h-5M15 4h5v5M9 20H4v-5"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="M5 5l14 14M19 5 5 19"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M4 12.5 9 17.5 20 6.5"/></symbol>
+    <symbol id="i-locate" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5 21 21"/></symbol>
+    <symbol id="i-log" viewBox="0 0 24 24"><path d="M4 5h13l3 3v11H4z"/><path d="M8 9h6M8 13h8M8 17h5"/></symbol>
+    <symbol id="i-bot" viewBox="0 0 24 24"><rect x="4" y="7" width="16" height="12" rx="3"/><path d="M12 3v4M9 13v1M15 13v1"/></symbol>
+    <symbol id="i-cog" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9 7 7M17 17l2.1 2.1M19.1 4.9 17 7M7 17l-2.1 2.1"/></symbol>
+    <symbol id="i-table" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9.5 10v10"/></symbol>
+    <symbol id="i-layers" viewBox="0 0 24 24"><path d="M12 4 4 8l8 4 8-4z"/><path d="M4 12l8 4 8-4M4 16l8 4 8-4"/></symbol>
+    <symbol id="i-merge" viewBox="0 0 24 24"><circle cx="5.5" cy="6" r="2"/><circle cx="18.5" cy="6" r="2"/><circle cx="12" cy="18" r="2"/><path d="M7.5 6h9M6.2 8v3.4a4 4 0 0 0 4 4h.3M17.8 8v3.4a4 4 0 0 1-4 4h-.3"/></symbol>
+    <symbol id="i-scissors" viewBox="0 0 24 24"><circle cx="6" cy="18" r="2.2"/><circle cx="18" cy="18" r="2.2"/><path d="M7.5 16.4 18 4M16.5 16.4 6 4"/></symbol>
+    <symbol id="i-dots" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></symbol>
+    <symbol id="i-filter" viewBox="0 0 24 24"><path d="M4 5h16l-6 7v7l-4-2v-5z"/></symbol>
+    <symbol id="i-sigma" viewBox="0 0 24 24"><path d="M18 5H7l6 7-6 7h11"/></symbol>
+  </defs>
+</svg>
+
+<div class="page">
+
+  <header class="doc-head">
+    <div class="doc-no">084 · A</div>
+    <div>
+      <h1>结果表：从角落里的网格卡到一张账页<br>方案 A · 画布内锚定卡</h1>
+      <p class="lede">结果仍然留在画布上，但不再挂在整张图的右外侧：它锚在分支最后一步的下方，高度随行数收紧，表格从“每格都画框”改成一张账页——细横线、行号槽、数字右对齐。</p>
+      <div class="decision"><span>改动最小的一案：执行/解析/连线都不动，只换版式与落点。代价是它仍在画布坐标系里——缩放会把 13px 正文压到 10px，宽表也只能靠横向滚动。</span></div>
+      <div class="nav">
+        <a class="on" href="01-canvas-anchored-card.html"><span>A</span>画布锚定卡</a>
+        <a href="02-bottom-result-dock.html"><span>B</span>底部结果抽屉</a>
+        <a href="03-right-result-column.html"><span>C</span>右侧结果列</a>
+      </div>
+    </div>
+  </header>
+
+  <section>
+    <div class="sec-hd"><span class="sec-no">1</span><h2>先把“现在这张卡”摊开看</h2></div>
+    <p class="sec-note">左边是按 <code>ResultTableNode.tsx</code> 当前样式 1:1 复刻的卡片：560 宽、400 高、每格 1px 边框、正文 12px 且用 <code>--muted-foreground</code>。6 行数据只占了 197px（表头 29 + 6×28），剩下 163px 是空白色块；表头和正文之间唯一的分层，就是表头那层浅灰底。</p>
+
+    <div class="pair">
+      <div>
+        <p class="tag"><span class="badge">现状</span><b>网格表 + 固定 400 高</b></p>
+        <div class="old">
+          <div class="old-hd">
+            <span class="lb">Result: 1 去掉金额为空的行 → 2 去除重复行 → 3 ...</span>
+            <span class="mt">6 rows x 2 cols</span>
+            <span class="b">CSV</span><span class="b">MD</span><span class="x">✕</span>
+          </div>
+          <table class="old-t">
+            <tr><th>地区</th><th>金额合计</th></tr>
+            <tr><td>西南</td><td>508827.25</td></tr>
+            <tr><td>华东</td><td>556674.98</td></tr>
+            <tr><td>东北</td><td>436002.87</td></tr>
+            <tr><td>华北</td><td>501825.62</td></tr>
+            <tr><td></td><td>12131.16</td></tr>
+            <tr><td>华南</td><td>633882.65</td></tr>
+          </table>
+        </div>
+      </div>
+      <div>
+        <p class="tag"><span class="badge">方案 A</span><b>账页表 + 高度随内容</b></p>
+        <div class="rt">
+          <div class="rt-hd">
+            <div class="chain">
+              <span class="step"><i class="no">01</i><span class="nm">去掉空金额</span></span>
+              <span class="sep">›</span>
+              <span class="step"><i class="no">02</i><span class="nm">去重</span></span>
+              <span class="sep">›</span>
+              <span class="step"><i class="no">03</i><span class="nm">按地区汇总</span></span>
+            </div>
+            <span class="rt-meta">6 行 × 2 列</span>
+            <div class="rt-acts">
+              <span class="split"><svg class="i i12"><use href="#i-copy"/></svg><span class="cv"></span><svg class="i i10"><use href="#i-chev"/></svg></span>
+              <span class="ibt"><svg class="i i12"><use href="#i-max"/></svg></span>
+              <span class="ibt"><svg class="i i12"><use href="#i-close"/></svg></span>
+            </div>
+          </div>
+          <table class="ledger">
+            <colgroup><col style="width:34px"/><col/><col style="width:132px"/></colgroup>
+            <thead><tr><th class="gut">#</th><th>地区</th><th class="num">金额合计</th></tr></thead>
+            <tbody>
+              <tr><td class="gut">1</td><td>西南</td><td class="num">508827.25</td></tr>
+              <tr><td class="gut">2</td><td>华东</td><td class="num">556674.98</td></tr>
+              <tr><td class="gut">3</td><td>东北</td><td class="num">436002.87</td></tr>
+              <tr class="hov"><td class="gut">4</td><td>华北</td><td class="num">501825.62</td></tr>
+              <tr><td class="gut">5</td><td><span class="nil"></span></td><td class="num">12131.16</td></tr>
+              <tr><td class="gut">6</td><td>华南</td><td class="num">633882.65</td></tr>
+            </tbody>
+          </table>
+          <div class="rt-ft"><span class="nil"></span><span>空值 1 处</span></div>
+        </div>
+      </div>
+    </div>
+    <p class="cap" style="max-width:1150px"><b>296 vs 400。</b>同一份 6 行数据，卡片从 400 高收到 296（44 标题 + 32 表头 + 6×32 行 + 26 页脚 + 2 边框），省下的 104px 是画布。行高从 28 抬到 32 不是放松，是让 13px 正文有呼吸；行数少时卡片自己变矮，行数多时到 8 行封顶再滚。</p>
+  </section>
+
+  <section>
+    <div class="sec-hd"><span class="sec-no">2</span><h2>表格的六条规矩</h2></div>
+    <p class="sec-note">这张卡不是“更好看的表格”，是把 CSV 预览当报表读：标签在左、数字贴右、行有编号、空值有形。六条都能落成 CSS，不需要新的数据。</p>
+
+    <div class="ann-w">
+      <div class="rt">
+        <div class="rt-hd">
+          <div class="chain">
+            <span class="step"><i class="no">01</i><span class="nm">去掉空金额</span></span>
+            <span class="sep">›</span>
+            <span class="step"><i class="no">02</i><span class="nm">去重</span></span>
+            <span class="sep">›</span>
+            <span class="step"><i class="no">03</i><span class="nm">按地区汇总</span></span>
+          </div>
+          <span class="rt-meta">6 行 × 2 列</span>
+          <div class="rt-acts">
+            <span class="split hov"><svg class="i i12"><use href="#i-copy"/></svg><span class="cv"></span><svg class="i i10"><use href="#i-chev"/></svg></span>
+            <span class="ibt"><svg class="i i12"><use href="#i-max"/></svg></span>
+            <span class="ibt"><svg class="i i12"><use href="#i-close"/></svg></span>
+          </div>
+        </div>
+        <table class="ledger">
+          <colgroup><col style="width:34px"/><col/><col style="width:132px"/></colgroup>
+          <thead><tr><th class="gut">#</th><th>地区</th><th class="num">金额合计</th></tr></thead>
+          <tbody>
+            <tr><td class="gut">1</td><td>西南</td><td class="num">508827.25</td></tr>
+            <tr><td class="gut">2</td><td>华东</td><td class="num">556674.98</td></tr>
+            <tr><td class="gut">3</td><td>东北</td><td class="num">436002.87</td></tr>
+            <tr><td class="gut">4</td><td>华北</td><td class="num">501825.62</td></tr>
+            <tr><td class="gut">5</td><td><span class="nil"></span></td><td class="num">12131.16</td></tr>
+            <tr><td class="gut">6</td><td>华南</td><td class="num">633882.65</td></tr>
+          </tbody>
+        </table>
+        <div class="rt-ft"><span class="nil"></span><span>空值 1 处</span></div>
+      </div>
+
+      <ul class="legend">
+        <li><span class="n">1</span><span><b>标题是索引，不是一句话。</b>整条管道拆成 <code>01 › 02 › 03</code> 的编号片段，每段最多 118px 再省略；不再把 <code>Result: 1 … → 2 … → 3 ...</code> 挤成一行截断。片段可点，跳到那一步。</span></li>
+        <li><span class="n">2</span><span><b>复制收成一个动作。</b>CSV / Markdown 进菜单，点完原地变“已复制”，3 秒后回来。原来两个 10.5px 的纯文字按钮，用户得先知道 MD 是什么。</span></li>
+        <li><span class="n">3</span><span><b>表头一条实线，行间只有细线。</b>表头下 1px 22% 墨色，行间 1px 8%，不再画竖线——竖线把表切成格子，横线才把它读成账页。</span></li>
+        <li><span class="n">4</span><span><b>数字贴右、用等宽。</b>数值列右对齐 + <code>tabular-nums</code> + mono，小数位才对齐；原始字符串一个字符不改，格式只影响排版。</span></li>
+        <li><span class="n">5</span><span><b>行号槽。</b>34px 等宽行号，比表头更淡。作用是报错时能说“第 5 行”，也让 6 行看起来像一页有编号的账。</span></li>
+        <li><span class="n">6</span><span><b>空值有形。</b>12×1px 的短线，比空白少一次猜测（是空、还是没加载），也不像“—”那样会被当成内容复制出去。页脚写清“空值 1 处”。</span></li>
+      </ul>
+    </div>
+    <p class="cap"><b>正文颜色从 <code>--muted-foreground</code>(0.556) 提到 88% 墨色。</b>现在这张表里最淡的东西是数据本身——表头比数据还深，这是反的。表头 11px 灰、正文 13px 墨，层级靠大小与深浅，不靠加粗。</p>
+
+    <h3>复制：一个按钮，两种格式</h3>
+    <div class="figure">
+      <div class="rt" style="width:420px">
+        <div class="rt-hd">
+          <div class="chain">
+            <span class="step"><i class="no">01</i><span class="nm">去重</span></span>
+            <span class="sep">›</span>
+            <span class="step"><i class="no">02</i><span class="nm">按地区汇总</span></span>
+          </div>
+          <span class="rt-meta">6 行 × 2 列</span>
+          <div class="rt-acts">
+            <span class="split hov"><svg class="i i12"><use href="#i-copy"/></svg><span class="cv"></span><svg class="i i10"><use href="#i-chev"/></svg></span>
+            <span class="ibt"><svg class="i i12"><use href="#i-close"/></svg></span>
+          </div>
+        </div>
+        <table class="ledger">
+          <colgroup><col style="width:34px"/><col/><col style="width:120px"/></colgroup>
+          <thead><tr><th class="gut">#</th><th>地区</th><th class="num">金额合计</th></tr></thead>
+          <tbody>
+            <tr><td class="gut">1</td><td>华南</td><td class="num">633882.65</td></tr>
+            <tr><td class="gut">2</td><td>华东</td><td class="num">556674.98</td></tr>
+            <tr><td class="gut">3</td><td>西南</td><td class="num">508827.25</td></tr>
+          </tbody>
+        </table>
+        <div class="pop" style="width:196px">
+          <div class="it hov"><svg class="i i12"><use href="#i-copy"/></svg>复制为 CSV<span class="k">6 行</span></div>
+          <div class="it"><svg class="i i12"><use href="#i-copy"/></svg>复制为 Markdown</div>
+        </div>
+      </div>
+      <p class="cap" style="max-width:420px">主键直接复制 CSV，箭头才展开格式菜单。<b>不再让用户先解码“MD”。</b>复制成功后按钮原地变「已复制」3 秒（同位置替换，不弹 toast）。</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-hd"><span class="sec-no">3</span><h2>落点：锚在分支最后一步的下方</h2></div>
+    <p class="sec-note">现在的位置是“整张图最右 + 60，向下每张 450”，与它属于哪条分支无关。A 改成三步：先试右 48；右侧会超出画布就落到分支包围盒下方 48；与已有结果卡相撞就再下移 24。三种情况都不会把画布撑宽。</p>
+
+    <div class="figure">
+      <div class="win" style="height:660px">
+        <div class="bar">
+          <div class="brand">Easy CSV</div>
+          <div class="menus"><span class="mbtn">文件</span><span class="mbtn">编辑</span><span class="mbtn">查看</span><span class="mbtn">工具</span><span class="mbtn">帮助</span><span class="mbtn">运行</span></div>
+          <div class="field-wrap"><div class="field"><span class="prompt">›</span><span class="ph">搜索命令、步骤或文件</span><kbd>Ctrl F</kbd></div></div>
+          <div class="icons">
+            <span class="icon-btn"><svg class="i"><use href="#i-search"/></svg></span>
+            <span class="icon-btn"><svg class="i"><use href="#i-log"/></svg></span>
+            <span class="icon-btn"><svg class="i"><use href="#i-bot"/></svg></span>
+            <span class="icon-btn"><svg class="i"><use href="#i-cog"/></svg></span>
+          </div>
+          <div class="wctl"><span class="wbtn">–</span><span class="wbtn">□</span><span class="wbtn">×</span></div>
+        </div>
+        <div class="body">
+          <div class="main">
+            <div class="tabstrip"><div class="tab on">销售分析<span class="x">×</span></div><div class="tab">Tab 2<span class="x">×</span></div></div>
+            <div class="canvas">
+              <svg class="edges" viewBox="0 0 1240 560" preserveAspectRatio="none">
+                <path d="M222 107 C 252 107, 252 107, 268 107"/>
+                <path d="M450 107 C 480 107, 480 167, 508 167"/>
+                <path d="M690 167 C 720 167, 720 227, 748 227"/>
+                <path class="anchor" d="M839 266 C 839 306, 700 306, 596 240"/>
+              </svg>
+              <div class="rail">
+                <b><svg class="i"><use href="#i-table"/></svg></b>
+                <b><svg class="i"><use href="#i-layers"/></svg></b>
+                <b><svg class="i"><use href="#i-merge"/></svg></b>
+                <b><svg class="i"><use href="#i-scissors"/></svg></b>
+                <b class="on"><svg class="i"><use href="#i-dots"/></svg></b>
+              </div>
+              <div class="tnode" style="left:40px;top:72px">
+                <div class="th">input<span class="st">5,000 行</span></div>
+                <div class="tb"><div class="kv"><b>地区</b>字符</div><div class="kv"><b>金额</b>数值</div></div>
+              </div>
+              <div class="tnode" style="left:268px;top:72px">
+                <div class="th">filter<span class="st">4,988 行</span></div>
+                <div class="tb"><div class="kv"><b>金额</b>is not null</div></div>
+              </div>
+              <div class="tnode" style="left:508px;top:132px">
+                <div class="th">dedup<span class="st">3,204 行</span></div>
+                <div class="tb"><div class="kv"><b>全部列</b></div></div>
+              </div>
+              <div class="tnode" style="left:748px;top:192px">
+                <div class="th">groupby<span class="st">6 行</span></div>
+                <div class="tb"><div class="kv"><b>地区</b>sum(金额)</div></div>
+              </div>
+
+              <div class="canvas-card" style="left:64px;top:238px">
+                <div class="rt">
+                  <div class="rt-hd">
+                    <div class="chain">
+                      <span class="step"><i class="no">01</i><span class="nm">去掉空金额</span></span>
+                      <span class="sep">›</span>
+                      <span class="step"><i class="no">02</i><span class="nm">去重</span></span>
+                      <span class="sep">›</span>
+                      <span class="step"><i class="no">03</i><span class="nm">按地区汇总</span></span>
+                    </div>
+                    <span class="rt-meta">6 行 × 2 列</span>
+                    <div class="rt-acts">
+                      <span class="split"><svg class="i i12"><use href="#i-copy"/></svg><span class="cv"></span><svg class="i i10"><use href="#i-chev"/></svg></span>
+                      <span class="ibt"><svg class="i i12"><use href="#i-max"/></svg></span>
+                      <span class="ibt"><svg class="i i12"><use href="#i-close"/></svg></span>
+                    </div>
+                  </div>
+                  <table class="ledger">
+                    <colgroup><col style="width:34px"/><col/><col style="width:132px"/></colgroup>
+                    <thead><tr><th class="gut">#</th><th>地区</th><th class="num">金额合计</th></tr></thead>
+                    <tbody>
+                      <tr><td class="gut">1</td><td>西南</td><td class="num">508827.25</td></tr>
+                      <tr><td class="gut">2</td><td>华东</td><td class="num">556674.98</td></tr>
+                      <tr><td class="gut">3</td><td>东北</td><td class="num">436002.87</td></tr>
+                      <tr><td class="gut">4</td><td>华北</td><td class="num">501825.62</td></tr>
+                      <tr><td class="gut">5</td><td><span class="nil"></span></td><td class="num">12131.16</td></tr>
+                      <tr><td class="gut">6</td><td>华南</td><td class="num">633882.65</td></tr>
+                    </tbody>
+                  </table>
+                  <div class="rt-ft"><span class="nil"></span><span>空值 1 处</span></div>
+                </div>
+              </div>
+
+              <div class="readout"><span>分支 1/1</span><span>1.2s</span></div>
+              <div class="statusline"><span>3 步</span><span class="sdot"></span><span>已保存 16:42</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="cap"><b>右侧放不下 560。</b>三步链最右到 930，加 48 再放 560 就是 1538，1240 的窗口必须缩到 0.78 才装得下——那时 13px 正文只剩 10px。所以 A 的主落点是“分支下方 48”，虚线从最后一步的底部拉到卡片右上：卡片归属于哪条分支，靠这条线说明，不靠猜。</p>
+    </div>
+
+    <h3>两条分支：第二张往下让 24</h3>
+    <p class="sec-note">分支 2 的结果不与分支 1 抢同一个落点：先算自己的锚点，再与已放置的卡片求交，撞上就下移 <code>卡片高 + 24</code>。原来每张固定让 450，是拿“最坏行数”当间距——6 行的卡只占 296，剩下的 154 是空气，第三张就跑到画布外了。</p>
+  </section>
+
+  <section>
+    <div class="sec-hd"><span class="sec-no">4</span><h2>高度与宽表：A 能做到哪一步</h2></div>
+    <p class="sec-note">行数少时卡片收紧；行数多时 8 行封顶，表头吸顶，行号槽固定在左。但卡片宽度还是 560——这是画布内方案的天花板。</p>
+
+    <div style="display:flex;gap:28px;align-items:flex-start">
+      <div>
+        <p class="tag" style="font-size:11.5px;color:var(--muted-fg);margin:0 0 8px"><b style="font-weight:500;color:var(--fg)">3 行</b> · 高 172</p>
+        <div class="rt" style="width:420px">
+          <div class="rt-hd" style="height:44px">
+            <div class="chain"><span class="step"><i class="no">01</i><span class="nm">去重</span></span><span class="sep">›</span><span class="step"><i class="no">02</i><span class="nm">按地区汇总</span></span></div>
+            <span class="rt-meta">3 行 × 2 列</span>
+            <div class="rt-acts"><span class="split"><svg class="i i12"><use href="#i-copy"/></svg><span class="cv"></span><svg class="i i10"><use href="#i-chev"/></svg></span><span class="ibt"><svg class="i i12"><use href="#i-close"/></svg></span></div>
+          </div>
+          <table class="ledger">
+            <colgroup><col style="width:34px"/><col/><col style="width:120px"/></colgroup>
+            <thead><tr><th class="gut">#</th><th>地区</th><th class="num">金额合计</th></tr></thead>
+            <tbody>
+              <tr><td class="gut">1</td><td>华南</td><td class="num">633882.65</td></tr>
+              <tr><td class="gut">2</td><td>华东</td><td class="num">556674.98</td></tr>
+              <tr><td class="gut">3</td><td>西南</td><td class="num">508827.25</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div>
+        <p class="tag" style="font-size:11.5px;color:var(--muted-fg);margin:0 0 8px"><b style="font-weight:500;color:var(--fg)">8 列 · 宽表</b> · 560 宽下第 5 列起要横向滚动</p>
+        <div class="rt" style="width:560px">
+          <div class="rt-hd">
+            <div class="chain"><span class="step"><i class="no">01</i><span class="nm">合并订单</span></span><span class="sep">›</span><span class="step"><i class="no">02</i><span class="nm">按地区汇总</span></span></div>
+            <span class="rt-meta">6 行 × 8 列</span>
+            <div class="rt-acts"><span class="split"><svg class="i i12"><use href="#i-copy"/></svg><span class="cv"></span><svg class="i i10"><use href="#i-chev"/></svg></span><span class="ibt"><svg class="i i12"><use href="#i-close"/></svg></span></div>
+          </div>
+          <table class="ledger">
+            <colgroup><col style="width:34px"/><col style="width:96px"/><col style="width:120px"/><col style="width:120px"/><col style="width:180px"/></colgroup>
+            <thead><tr><th class="gut">#</th><th>地区</th><th>品类</th><th>销售员</th><th class="num">金额合计</th></tr></thead>
+            <tbody>
+              <tr><td class="gut">1</td><td>西南</td><td>办公</td><td>陈立</td><td class="num">508827.25</td></tr>
+              <tr><td class="gut">2</td><td>华东</td><td>耗材</td><td>周雨</td><td class="num">556674.98</td></tr>
+              <tr><td class="gut">3</td><td>东北</td><td>家具</td><td>李航</td><td class="num">436002.87</td></tr>
+              <tr><td class="gut">4</td><td>华北</td><td>办公</td><td>王珂</td><td class="num">501825.62</td></tr>
+              <tr><td class="gut">5</td><td><span class="nil"></span></td><td>耗材</td><td><span class="nil"></span></td><td class="num">12131.16</td></tr>
+              <tr><td class="gut">6</td><td>华南</td><td>家具</td><td>赵敏</td><td class="num">633882.65</td></tr>
+            </tbody>
+          </table>
+          <div class="hscroll"><i></i></div>
+          <div class="rt-ft"><span class="nil"></span><span>空值 2 处</span><span class="spacer"></span><span>还有 3 列 · 横向滚动查看</span></div>
+        </div>
+      </div>
+    </div>
+    <p class="cap"><b>宽表是 A 的硬伤。</b>8 列在 560 里平均只剩 66px，中文列名与 9 位金额都要省略号。把卡片加宽到 760 又会挤压画布；在画布内无论怎么调，宽度都只能从“图有多宽”里借。这一条直接指向方案 B。</p>
+  </section>
+
+  <section>
+    <div class="sec-hd"><span class="sec-no">5</span><h2>规则与代价</h2></div>
+    <table class="doc-t">
+      <colgroup><col style="width:150px"/><col/></colgroup>
+      <tr><th>项</th><th>取值</th></tr>
+      <tr><td>卡片宽度</td><td>560 固定（与节点 <code>width</code> 常量对齐，当前代码里 520 / 560 / 426 / 400 四个数不一致，先统一）</td></tr>
+      <tr><td>卡片高度</td><td>44 + 32 + 32×行数 + 26（页脚），8 行封顶；无页脚时省 26。<code>usePipelineLayout</code> 的 <code>height</code> 要跟着实测高度走</td></tr>
+      <tr><td>落点</td><td>右 48 → 放不下则分支包围盒下方 48 → 与已有结果卡相撞再下移 <code>高 + 24</code>；首次出现时若完全在视口外，做一次 <code>fitView(padding 0.2)</code></td></tr>
+      <tr><td>列宽</td><td>采样前 50 行 + 表头：数值列 = 最长值 + 24，封顶 160；文本列按内容封 240，剩余空间给最后一列文本</td></tr>
+      <tr><td>对齐</td><td>数值右对齐 + <code>tabular-nums</code> + mono；文本左对齐。判数值用「可解析为数字且不含货币/千分位符号」，不做格式化</td></tr>
+      <tr><td>空值</td><td>12×1px 短线，不写字符；页脚汇总空值处数</td></tr>
+      <tr><td>复制</td><td>一个分体按钮：主键复制 CSV，箭头展开 CSV / Markdown；成功原地变“已复制”</td></tr>
+    </table>
+
+    <h3>代价</h3>
+    <ul>
+      <li><b>缩放会吃掉字号。</b>卡片在画布坐标系里，<code>fitView</code> 到 0.8 时 13px 正文只有 10.4px。要么限制最小缩放（画布其他内容又放不下），要么接受“看结果前先缩回 100%”。</li>
+      <li><b>宽表只能滚。</b>8 列以上在 560 里必然横向滚动，行号槽与首列吸左后，可视区只剩三列多。</li>
+      <li><b>落点规则永远在猜。</b>右、下、让位三种分支，加上用户手动拖过的位置要保留，判断逻辑比表格本身复杂；而且卡片会跟着画布一起被拖走。</li>
+      <li><b>一张卡一条分支，结果之间没法对照。</b>两张结果卡并排时，6 行 × 2 列还算挤得下，10 行就要各自滚。</li>
+    </ul>
+    <p style="margin-top:14px">好处也说清楚：它保住“结果长在分支末端”这件事，不需要新面板、新状态、新快捷键，是三条路里唯一能在一天内落地且不改产品模型的。</p>
+  </section>
+
+</div>
+</body>
+</html>

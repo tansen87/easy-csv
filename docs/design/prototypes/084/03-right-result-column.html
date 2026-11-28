@@ -1,0 +1,443 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>原型 084-03 · 结果表重设计 · 方案 C 右侧结果列</title>
+<style>
+  :root{
+    --font:"Inter","Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Consolas,monospace;
+
+    --bg:#fff;
+    --fg:oklch(0.145 0 0);
+    --ink-88:color-mix(in oklab, oklch(0.145 0 0) 88%, #fff);
+    --ink-4:color-mix(in oklab, oklch(0.145 0 0) 4%, transparent);
+    --card:#fff;
+    --muted:oklch(0.97 0 0);
+    --muted-fg:oklch(0.556 0 0);
+    --muted-fg-2:oklch(0.66 0 0);
+    --muted-fg-3:oklch(0.76 0 0);
+    --border:oklch(0.922 0 0);
+    --border-soft:oklch(0.2 0.01 80 / 8%);
+    --border-strong:oklch(0.2 0.01 80 / 22%);
+    --nil:oklch(0.2 0.01 80 / 26%);
+
+    --brand:oklch(0.42 0.055 250);
+    --brand-ink:oklch(0.35 0.05 250);
+    --brand-6:color-mix(in oklab, oklch(0.42 0.055 250) 6%, transparent);
+    --brand-9:color-mix(in oklab, oklch(0.42 0.055 250) 9%, transparent);
+    --brand-12:color-mix(in oklab, oklch(0.42 0.055 250) 12%, transparent);
+    --chrome:color-mix(in oklab, oklch(0.42 0.055 250) 12%, #fff);
+    --chrome-border:color-mix(in oklab, oklch(0.42 0.055 250) 30%, transparent);
+
+    --stage:oklch(0.975 0.004 85);
+    --canvas-dot:oklch(0.2 0.01 80 / 11%);
+    --canvas-line:oklch(0.2 0.01 80 / 30%);
+    --shadow-card:0 1px 2px oklch(0.2 0.02 80 / 5%);
+    --shadow-win:0 24px 64px -34px oklch(0.2 0.02 80 / 34%),0 2px 6px oklch(0.2 0.02 80 / 6%);
+    --shadow-fly:0 16px 40px -20px oklch(0.2 0.02 80 / 28%),0 2px 6px oklch(0.2 0.02 80 / 6%);
+
+    --warning:oklch(0.55 0.1 72);
+    --success:oklch(0.52 0.09 150);
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--stage)}
+  body{font-family:var(--font);color:var(--fg);font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased}
+  .page{max-width:1320px;margin:0 auto;padding:56px 32px 104px}
+
+  .doc-head{display:grid;grid-template-columns:76px minmax(0,1fr);gap:24px;padding-bottom:26px;border-bottom:1px solid var(--border-strong)}
+  .doc-no{font-family:var(--mono);font-size:12px;color:var(--muted-fg);padding-top:6px;letter-spacing:.02em}
+  h1{margin:0 0 8px;font-size:27px;font-weight:500;line-height:1.28;letter-spacing:-.01em}
+  .lede{margin:0;max-width:790px;font-size:13.5px;color:var(--muted-fg)}
+  .decision{display:flex;gap:8px;margin:16px 0 0;padding:8px 12px;border-left:2px solid var(--brand);
+            background:var(--brand-6);font-size:12.5px;max-width:820px}
+  .decision b{font-weight:500}
+
+  .nav{display:flex;gap:4px;margin-top:18px}
+  .nav a{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 10px;border:1px solid var(--border);
+         border-radius:6px;font-size:11.5px;color:var(--muted-fg);text-decoration:none;background:#fff}
+  .nav a.on{border-color:var(--border-strong);background:var(--brand-9);color:var(--brand-ink)}
+  .nav a span{font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-3)}
+
+  section{margin-top:60px}
+  .sec-hd{display:flex;align-items:baseline;gap:10px;margin-bottom:6px}
+  .sec-no{font-family:var(--mono);font-size:11px;color:var(--brand)}
+  h2{margin:0;font-size:18px;font-weight:500;letter-spacing:-.005em}
+  .sec-note{margin:0 0 20px;max-width:840px;font-size:13px;color:var(--muted-fg)}
+  h3{margin:32px 0 12px;font-size:13.5px;font-weight:500}
+  p{margin:0 0 12px;font-size:13px;color:var(--muted-fg);max-width:840px}
+
+  kbd{display:inline-flex;align-items:center;justify-content:center;height:16px;min-width:16px;padding:0 4px;
+      border:1px solid var(--border);border-radius:3px;font-family:var(--mono);font-size:9.5px;line-height:1;color:var(--muted-fg-2)}
+  .i{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+  .i12{width:12px;height:12px}.i14{width:14px;height:14px}.i10{width:10px;height:10px}
+
+  .figure{position:relative;width:max-content;max-width:100%}
+  .cap{margin:10px 0 0;font-size:11.5px;color:var(--muted-fg-2);max-width:1000px}
+  .cap b{font-weight:500;color:var(--fg)}
+
+  /* 窗口 */
+  .win{position:relative;width:1240px;height:720px;display:flex;flex-direction:column;background:var(--bg);
+       border:1px solid var(--border);border-radius:10px;overflow:hidden;box-shadow:var(--shadow-win)}
+  .bar{position:relative;flex:none;display:flex;align-items:center;height:36px;padding-left:16px;
+       background:var(--chrome);box-shadow:inset 0 -1px 0 var(--chrome-border)}
+  .brand{flex:none;padding-right:12px;font-size:12.5px;font-weight:500;line-height:1;color:var(--fg)}
+  .menus{display:flex;align-items:center;flex:none}
+  .mbtn{height:26px;padding:0 12px;border-radius:6px;font-size:12px;font-weight:500;line-height:26px;color:var(--brand-ink)}
+  .field-wrap{position:absolute;left:50%;top:5px;transform:translateX(-50%);width:380px}
+  .field{display:grid;grid-template-columns:12px minmax(0,1fr) auto;align-items:center;gap:8px;height:26px;
+         padding:0 6px 0 10px;border:1px solid var(--border);border-radius:7px;background:var(--bg);color:var(--muted-fg-2)}
+  .field .prompt{font-family:var(--mono);font-size:13px;color:var(--brand);text-align:center;transform:translateY(-1px)}
+  .field .ph{font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .icons{margin-left:auto;display:flex;align-items:center;gap:2px;flex:none}
+  .icon-btn{display:grid;place-items:center;width:28px;height:28px;border-radius:6px;color:var(--brand-ink)}
+  .icon-btn.on{background:var(--brand-12)}
+  .wctl{display:flex;margin-left:10px}
+  .wbtn{display:grid;place-items:center;width:46px;height:36px;color:var(--muted-fg);font-size:12px}
+
+  .body{flex:1;display:flex;min-height:0}
+  .main{flex:1;min-width:0;display:flex;flex-direction:column}
+  .tabstrip{flex:none;display:flex;align-items:center;gap:4px;height:34px;padding:0 10px;border-bottom:1px solid var(--border-soft)}
+  .tab{display:flex;align-items:center;gap:7px;height:26px;padding:0 8px 0 10px;border-radius:6px;font-size:11.5px;color:var(--muted-fg)}
+  .tab.on{background:var(--muted);color:var(--fg);font-weight:500}
+  .tab .x{color:var(--muted-fg-3)}
+
+  .canvas{position:relative;flex:1;overflow:hidden;background-color:var(--bg);
+          background-image:radial-gradient(var(--canvas-dot) 1px,transparent 1px);background-size:22px 22px}
+  .edges{position:absolute;inset:0;width:100%;height:100%}
+  .edges path{fill:none;stroke:var(--canvas-line);stroke-width:1.25}
+  .edges .anchor{stroke-dasharray:3 4;stroke:var(--brand);opacity:.5}
+  .rail{position:absolute;left:12px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:2px;
+        padding:3px;border:1px solid var(--border);border-radius:7px;background:var(--card);box-shadow:var(--shadow-card)}
+  .rail b{display:grid;place-items:center;width:24px;height:24px;border-radius:5px;color:var(--muted-fg-2)}
+  .tnode{position:absolute;background:var(--card);border:1px solid var(--border);border-radius:8px;
+         box-shadow:var(--shadow-card);overflow:hidden;width:182px}
+  .tnode .th{display:flex;align-items:center;gap:6px;height:26px;padding:0 9px;border-bottom:1px solid var(--border-soft);
+             font-family:var(--mono);font-size:10.5px;color:var(--fg)}
+  .tnode .th .st{font-family:var(--font);font-size:9.5px;color:var(--muted-fg-2);margin-left:auto}
+  .tnode .tb{padding:6px 9px 7px}
+  .tnode .kv{display:flex;align-items:center;gap:6px;height:16px;font-size:10px;color:var(--muted-fg)}
+  .tnode .kv b{font-family:var(--mono);font-size:9.5px;font-weight:400;color:var(--fg)}
+  .readout{position:absolute;top:10px;right:12px;display:flex;gap:10px;font-family:var(--mono);font-size:10px;color:var(--muted-fg-2)}
+
+  /* 停靠区 */
+  .dock{flex:none;display:flex;align-items:stretch;background:var(--card);border-left:1px solid var(--border-soft)}
+  .col{flex:none;display:flex;flex-direction:column;border-left:1px solid var(--border-soft);overflow:hidden;background:#fff}
+  .col.p{width:320px}
+  .col.r{width:420px}
+  .dhead{flex:none;display:flex;align-items:center;gap:7px;height:36px;padding:0 6px 0 12px;border-bottom:1px solid var(--border-soft)}
+  .dhead .no{font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-3);font-variant-numeric:tabular-nums}
+  .dhead h3{margin:0;font-size:12.5px;font-weight:500;color:var(--fg)}
+  .dhead .cnt{font-family:var(--mono);font-size:10px;color:var(--muted-fg-2);font-variant-numeric:tabular-nums}
+  .dhead .spacer{flex:1}
+  .ibtn{display:grid;place-items:center;width:24px;height:24px;border-radius:5px;color:var(--muted-fg-2)}
+  .ibtn.hov{background:var(--ink-4);color:var(--fg)}
+  .dsub{flex:none;display:flex;align-items:center;gap:8px;height:28px;padding:0 12px;border-bottom:1px solid var(--border-soft);
+        font-size:10.5px;color:var(--muted-fg-2);overflow:hidden}
+  .dbody{flex:1;min-height:0;padding:6px 0 10px;overflow:hidden}
+  .dft{flex:none;display:flex;align-items:center;gap:8px;height:26px;padding:0 12px;border-top:1px solid var(--border-soft);
+       font-size:10.5px;color:var(--muted-fg-2)}
+  .dft .sp{flex:1}
+
+  .row{display:grid;grid-template-columns:minmax(0,1fr) 54px 26px;align-items:center;height:30px;padding:0 12px;gap:10px;
+       font-size:11.5px;color:var(--fg)}
+  .row .nm{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+  .ruler{height:3px;border-radius:2px;background:color-mix(in oklab, var(--fg) 9%, transparent);position:relative}
+  .ruler i{position:absolute;top:0;bottom:0;left:0;border-radius:2px;background:color-mix(in oklab, var(--fg) 40%, transparent)}
+  .miss{font-family:var(--mono);font-size:10px;text-align:right;color:var(--muted-fg-3);font-variant-numeric:tabular-nums}
+  .miss.warn{color:var(--warning)}
+
+  .chain{display:flex;align-items:center;gap:5px;min-width:0}
+  .step{display:flex;align-items:center;gap:5px;min-width:0}
+  .step .no{flex:none;font-family:var(--mono);font-size:9px;line-height:15px;color:var(--muted-fg-2);
+            background:var(--muted);border-radius:3px;padding:0 3px}
+  .step .nm{font-size:11px;color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:96px}
+  .sep{flex:none;font-size:10px;color:var(--muted-fg-3);line-height:1}
+
+  .ledger{width:100%;border-collapse:separate;border-spacing:0;table-layout:fixed}
+  .ledger th{position:sticky;top:0;z-index:2;height:30px;padding:0 12px;background:#fff;text-align:left;
+             font-size:10.5px;font-weight:500;color:var(--muted-fg);border-bottom:1px solid var(--border-strong);white-space:nowrap}
+  .ledger th.num,.ledger td.num{text-align:right}
+  .ledger td{height:30px;padding:0 12px;font-size:12.5px;color:var(--ink-88);border-bottom:1px solid var(--border-soft);
+             white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ledger tr:last-child td{border-bottom:0}
+  .ledger tbody tr.hov td{background:var(--ink-4)}
+  .ledger td.num{font-family:var(--mono);font-size:12px;font-variant-numeric:tabular-nums;color:var(--fg)}
+  .ledger .gut,.ledger th.gut{width:30px;padding:0 8px 0 0;text-align:right;font-family:var(--mono);
+             font-size:10px;color:var(--muted-fg-3);font-variant-numeric:tabular-nums}
+  .nil{display:inline-block;width:12px;height:1px;background:var(--nil);vertical-align:middle}
+
+  /* 裁切用 */
+  .slab{display:flex;flex-direction:column;width:420px;height:420px;border:1px solid var(--border);border-radius:8px;
+        overflow:hidden;background:#fff;box-shadow:var(--shadow-card)}
+
+  .doc-t{width:100%;max-width:1080px;border-collapse:collapse;font-size:12.5px}
+  .doc-t th{text-align:left;font-weight:500;font-size:11px;color:var(--muted-fg-2);padding:8px 12px 8px 0;
+            border-bottom:1px solid var(--border-strong)}
+  .doc-t td{padding:9px 12px 9px 0;border-bottom:1px solid var(--border-soft);color:var(--muted-fg);vertical-align:top}
+  .doc-t td:first-child{color:var(--fg);white-space:nowrap}
+  code{font-family:var(--mono);font-size:11px;background:var(--muted);padding:1px 4px;border-radius:3px;color:var(--fg)}
+
+  ul{margin:0 0 12px;padding-left:18px;font-size:13px;color:var(--muted-fg);max-width:840px}
+  li{margin-bottom:6px}
+  li b{font-weight:500;color:var(--fg)}
+
+  .budget{display:flex;height:44px;width:1240px;border:1px solid var(--border);border-radius:6px;overflow:hidden;
+          font-family:var(--mono);font-size:10px;color:var(--muted-fg-2)}
+  .budget div{display:flex;align-items:center;justify-content:center;border-right:1px solid var(--border-soft)}
+  .budget .b-canvas{width:500px;background:#fff}
+  .budget .b-res{width:420px;background:var(--brand-9);color:var(--brand-ink)}
+  .budget .b-ov{width:320px;background:var(--muted);border-right:0}
+  .budget-lbl{display:flex;width:1240px;margin-top:6px;font-size:10.5px;color:var(--muted-fg-2)}
+  .budget-lbl span:nth-child(1){width:500px}
+  .budget-lbl span:nth-child(2){width:420px}
+  .budget-lbl span:nth-child(3){width:320px}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M15 5.5A1.5 1.5 0 0 0 13.5 4H6a2 2 0 0 0-2 2v7.5A1.5 1.5 0 0 0 5.5 15"/></symbol>
+    <symbol id="i-chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
+    <symbol id="i-chevl" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="M5 5l14 14M19 5 5 19"/></symbol>
+    <symbol id="i-locate" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5 21 21"/></symbol>
+    <symbol id="i-log" viewBox="0 0 24 24"><path d="M4 5h13l3 3v11H4z"/><path d="M8 9h6M8 13h8M8 17h5"/></symbol>
+    <symbol id="i-bot" viewBox="0 0 24 24"><rect x="4" y="7" width="16" height="12" rx="3"/><path d="M12 3v4M9 13v1M15 13v1"/></symbol>
+    <symbol id="i-cog" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9 7 7M17 17l2.1 2.1M19.1 4.9 17 7M7 17l-2.1 2.1"/></symbol>
+    <symbol id="i-table" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9.5 10v10"/></symbol>
+    <symbol id="i-layers" viewBox="0 0 24 24"><path d="M12 4 4 8l8 4 8-4z"/><path d="M4 12l8 4 8-4M4 16l8 4 8-4"/></symbol>
+    <symbol id="i-merge" viewBox="0 0 24 24"><circle cx="5.5" cy="6" r="2"/><circle cx="18.5" cy="6" r="2"/><circle cx="12" cy="18" r="2"/><path d="M7.5 6h9M6.2 8v3.4a4 4 0 0 0 4 4h.3M17.8 8v3.4a4 4 0 0 1-4 4h-.3"/></symbol>
+    <symbol id="i-scissors" viewBox="0 0 24 24"><circle cx="6" cy="18" r="2.2"/><circle cx="18" cy="18" r="2.2"/><path d="M7.5 16.4 18 4M16.5 16.4 6 4"/></symbol>
+    <symbol id="i-dots" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.6-5.9"/><path d="M20 4v4.5h-4.5"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v5l3.2 2"/></symbol>
+    <symbol id="i-braces" viewBox="0 0 24 24"><path d="M9.5 4H8a2 2 0 0 0-2 2v3a2 2 0 0 1-2 2 2 2 0 0 1 2 2v3a2 2 0 0 0 2 2h1.5"/><path d="M14.5 4H16a2 2 0 0 1 2 2v3a2 2 0 0 0 2 2 2 2 0 0 0-2 2v3a2 2 0 0 1-2 2h-1.5"/></symbol>
+  </defs>
+</svg>
+
+<div class="page">
+
+  <header class="doc-head">
+    <div class="doc-no">084 · C</div>
+    <div>
+      <h1>结果表：从角落里的网格卡到一张账页<br>方案 C · 右侧结果列</h1>
+      <p class="lede">结果变成停靠区的一列：和概览、版本、血缘、变量并排，420 宽，展开时画布让位、关掉时收成书脊。它不覆盖任何东西，也不再跟着画布缩放——但一列只有 420。</p>
+      <div class="decision"><span>与 076 的停靠体系最一致的一案。代价是宽度：420 只够两到三列，宽表照样要横向滚动，而且结果列会与概览抢同一个宽度预算。</span></div>
+      <div class="nav">
+        <a href="01-canvas-anchored-card.html"><span>A</span>画布锚定卡</a>
+        <a href="02-bottom-result-dock.html"><span>B</span>底部结果抽屉</a>
+        <a class="on" href="03-right-result-column.html"><span>C</span>右侧结果列</a>
+      </div>
+    </div>
+  </header>
+
+  <section>
+    <div class="sec-hd"><span class="sec-no">1</span><h2>结果成为一列</h2></div>
+    <p class="sec-note">与 076 的规则一致：列的位置固定，宽度 420（可拖 380–520），关掉时不是消失而是收成 44px 书脊。画布拿到 500，比 076 里两列 320 + 320 时的 600 略窄，但仍在 440 的底线之上。</p>
+
+    <div class="figure">
+      <div class="win">
+        <div class="bar">
+          <div class="brand">Easy CSV</div>
+          <div class="menus"><span class="mbtn">文件</span><span class="mbtn">编辑</span><span class="mbtn">查看</span><span class="mbtn">工具</span><span class="mbtn">帮助</span><span class="mbtn">运行</span></div>
+          <div class="field-wrap"><div class="field"><span class="prompt">›</span><span class="ph">搜索命令、步骤或文件</span><kbd>Ctrl F</kbd></div></div>
+          <div class="icons">
+            <span class="icon-btn"><svg class="i"><use href="#i-search"/></svg></span>
+            <span class="icon-btn"><svg class="i"><use href="#i-log"/></svg></span>
+            <span class="icon-btn"><svg class="i"><use href="#i-bot"/></svg></span>
+            <span class="icon-btn"><svg class="i"><use href="#i-cog"/></svg></span>
+          </div>
+          <div class="wctl"><span class="wbtn">–</span><span class="wbtn">□</span><span class="wbtn">×</span></div>
+        </div>
+
+        <div class="body">
+          <div class="main">
+            <div class="tabstrip"><div class="tab on">销售分析<span class="x">×</span></div><div class="tab">Tab 2<span class="x">×</span></div></div>
+            <div class="canvas">
+              <svg class="edges" viewBox="0 0 460 640" preserveAspectRatio="none">
+                <path d="M222 120 C 250 120, 250 120, 264 120"/>
+                <path d="M446 120 C 470 120, 470 190, 490 190"/>
+              </svg>
+              <div class="rail">
+                <b><svg class="i"><use href="#i-table"/></svg></b>
+                <b><svg class="i"><use href="#i-layers"/></svg></b>
+                <b><svg class="i"><use href="#i-merge"/></svg></b>
+                <b><svg class="i"><use href="#i-scissors"/></svg></b>
+                <b class="on"><svg class="i"><use href="#i-dots"/></svg></b>
+              </div>
+              <div class="tnode" style="left:52px;top:86px">
+                <div class="th">input<span class="st">5,000 行</span></div>
+                <div class="tb"><div class="kv"><b>地区</b>字符</div><div class="kv"><b>金额</b>数值</div></div>
+              </div>
+              <div class="tnode" style="left:264px;top:86px">
+                <div class="th">filter<span class="st">4,988 行</span></div>
+                <div class="tb"><div class="kv"><b>金额</b>is not null</div></div>
+              </div>
+              <div class="readout"><span>画布 500</span></div>
+            </div>
+          </div>
+
+          <div class="dock" style="border-left:0">
+            <!-- 结果 -->
+            <div class="col r">
+              <div class="dhead">
+                <span style="display:grid;place-items:center;color:var(--brand-ink)"><svg class="i i12"><use href="#i-table"/></svg></span><h3>结果</h3><span class="cnt">6 行 × 2 列</span>
+                <span class="spacer"></span>
+                <span class="ibtn"><svg class="i i12"><use href="#i-locate"/></svg></span>
+                <span class="ibtn"><svg class="i i12"><use href="#i-chevl"/></svg></span>
+                <span class="ibtn"><svg class="i i12"><use href="#i-close"/></svg></span>
+              </div>
+              <div class="dsub">
+                <div class="chain">
+                  <span class="step"><i class="no">01</i><span class="nm">去掉空金额</span></span>
+                  <span class="sep">›</span>
+                  <span class="step"><i class="no">02</i><span class="nm">去重</span></span>
+                  <span class="sep">›</span>
+                  <span class="step"><i class="no">03</i><span class="nm">按地区汇总</span></span>
+                </div>
+                <span style="margin-left:auto;display:grid;place-items:center;width:22px;height:22px;color:var(--muted-fg-2)">
+                  <svg class="i i12"><use href="#i-copy"/></svg>
+                </span>
+              </div>
+              <div class="dbody" style="padding:0">
+                <table class="ledger">
+                  <colgroup><col style="width:30px"/><col/><col style="width:118px"/></colgroup>
+                  <thead><tr><th class="gut">#</th><th>地区</th><th class="num">金额合计</th></tr></thead>
+                  <tbody>
+                    <tr><td class="gut">1</td><td>西南</td><td class="num">508827.25</td></tr>
+                    <tr><td class="gut">2</td><td>华东</td><td class="num">556674.98</td></tr>
+                    <tr class="hov"><td class="gut">3</td><td>东北</td><td class="num">436002.87</td></tr>
+                    <tr><td class="gut">4</td><td>华北</td><td class="num">501825.62</td></tr>
+                    <tr><td class="gut">5</td><td><span class="nil"></span></td><td class="num">12131.16</td></tr>
+                    <tr><td class="gut">6</td><td>华南</td><td class="num">633882.65</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="dft"><span class="nil"></span><span>空值 1 处</span><span class="sp"></span><span>Esc 收起</span></div>
+            </div>
+
+            <!-- 01 数据概览 -->
+            <div class="col p">
+              <div class="dhead">
+                <span class="no">01</span><h3>数据概览</h3>
+                <span class="spacer"></span>
+                <span class="ibtn"><svg class="i i12"><use href="#i-refresh"/></svg></span>
+                <span class="ibtn"><svg class="i i12"><use href="#i-chevl"/></svg></span>
+                <span class="ibtn"><svg class="i i12"><use href="#i-close"/></svg></span>
+              </div>
+              <div class="dsub">5,000 行 · 5 列 · 2 列有缺失</div>
+              <div class="dbody">
+                <div class="row"><span class="nm">日期</span><span class="ruler"><i style="width:100%"></i></span><span class="miss">0</span></div>
+                <div class="row"><span class="nm">地区</span><span class="ruler"><i style="width:99.8%"></i></span><span class="miss warn">12</span></div>
+                <div class="row"><span class="nm">品类</span><span class="ruler"><i style="width:100%"></i></span><span class="miss">0</span></div>
+                <div class="row"><span class="nm">金额</span><span class="ruler"><i style="width:99.9%"></i></span><span class="miss warn">3</span></div>
+                <div class="row"><span class="nm">数量</span><span class="ruler"><i style="width:99.2%"></i></span><span class="miss warn">41</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="cap"><b>1240 − 420 − 320 = 500 画布。</b>结果列紧贴画布，看数据不用把视线拉到窗口最右再折回来；概览在它右边，两列互不覆盖。这一屏里没有浮窗、没有遮住任何东西。</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-hd"><span class="sec-no">2</span><h2>420 宽里的一张账页</h2></div>
+    <p class="sec-note">列内版式与方案 A 同源：44 高的列头、链条、账页表、页脚。差别是标题栏由停靠区统一提供（序号 + 名称 + 计数 + 收起 + 关闭），结果卡不再自带一套头。</p>
+
+    <div style="display:flex;gap:36px;align-items:flex-start">
+      <div class="slab">
+        <div class="dhead">
+          <span style="display:grid;place-items:center;color:var(--brand-ink)"><svg class="i i12"><use href="#i-table"/></svg></span><h3>结果</h3><span class="cnt">6 行 × 2 列</span>
+          <span class="spacer"></span>
+          <span class="ibtn"><svg class="i i12"><use href="#i-locate"/></svg></span>
+          <span class="ibtn"><svg class="i i12"><use href="#i-chevl"/></svg></span>
+          <span class="ibtn"><svg class="i i12"><use href="#i-close"/></svg></span>
+        </div>
+        <div class="dsub">
+          <div class="chain">
+            <span class="step"><i class="no">01</i><span class="nm">去掉空金额</span></span>
+            <span class="sep">›</span>
+            <span class="step"><i class="no">02</i><span class="nm">去重</span></span>
+            <span class="sep">›</span>
+            <span class="step"><i class="no">03</i><span class="nm">按地区汇总</span></span>
+          </div>
+        </div>
+        <div class="dbody" style="padding:0;flex:1">
+          <table class="ledger">
+            <colgroup><col style="width:30px"/><col/><col style="width:118px"/></colgroup>
+            <thead><tr><th class="gut">#</th><th>地区</th><th class="num">金额合计</th></tr></thead>
+            <tbody>
+              <tr><td class="gut">1</td><td>西南</td><td class="num">508827.25</td></tr>
+              <tr><td class="gut">2</td><td>华东</td><td class="num">556674.98</td></tr>
+              <tr><td class="gut">3</td><td>东北</td><td class="num">436002.87</td></tr>
+              <tr><td class="gut">4</td><td>华北</td><td class="num">501825.62</td></tr>
+              <tr><td class="gut">5</td><td><span class="nil"></span></td><td class="num">12131.16</td></tr>
+              <tr><td class="gut">6</td><td>华南</td><td class="num">633882.65</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="dft"><span class="nil"></span><span>空值 1 处</span><span class="sp"></span><span>复制 CSV</span></div>
+      </div>
+
+      <div style="max-width:580px">
+        <p style="font-size:12.5px">这一列里能做的和不能做的，最好在动工前说清：</p>
+        <table class="doc-t" style="font-size:12px">
+          <colgroup><col style="width:112px"/><col/></colgroup>
+          <tr><th>项</th><th>420 宽下的取值</th></tr>
+          <tr><td>列数</td><td>2–3 列舒服，4 列开始省略号，6 列以上必须横向滚动</td></tr>
+          <tr><td>行数</td><td>一屏约 9 行（30 高）；更多时列内滚动，表头吸顶</td></tr>
+          <tr><td>数值列</td><td>封顶 118（9 位小数），右对齐 + 等宽，贴住列右缘 12</td></tr>
+          <tr><td>多分支</td><td>列内顶部一行紧凑页签 <code>01 / 02</code>，没有则整行不出现</td></tr>
+          <tr><td>标题</td><td>不写 <code>Result:</code>；由停靠区列头给 <code>05 结果</code>，分支靠链条</td></tr>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-hd"><span class="sec-no">3</span><h2>宽度预算：它必须和概览抢位</h2></div>
+    <p class="sec-note">076 只给了四个面板一份预算，结果列是第五个。1240 窗口、AI 关闭时刚好：500 画布 + 420 结果 + 320 概览。AI 一开（360），就必须按“最久没用”把一列收成书脊——通常收的是概览，因为结果是你刚跑完就要看的东西。</p>
+
+    <div class="figure">
+      <div class="budget">
+        <div class="b-canvas">画布 500</div>
+        <div class="b-res">结果 420</div>
+        <div class="b-ov">概览 320</div>
+      </div>
+      <div class="budget-lbl"><span>≥ 440 底线</span><span>380–520</span><span>320</span></div>
+      <p class="cap"><b>1240 的窗口只有三种排法：</b>结果 + 概览（500 画布）、结果 + 概览收书脊（776 画布）、结果收书脊 + 概览（876 画布）。AI 打开时（360）第三种也不成立，只能再收一列。</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-hd"><span class="sec-no">4</span><h2>规则与代价</h2></div>
+    <table class="doc-t">
+      <colgroup><col style="width:150px"/><col/></colgroup>
+      <tr><th>项</th><th>取值</th></tr>
+      <tr><td>位置</td><td>停靠区最左列（紧贴画布）。<b>不占 01–04 的编号</b>：列头是「表图标 + 结果」，与四个视图面板区分开；宽度与书脊规则沿用 076</td></tr>
+      <tr><td>列宽</td><td>420 默认，可拖 380–520；与其它列不共享宽度（结果表比概览更需要横向空间）</td></tr>
+      <tr><td>行高</td><td>表头 30、数据行 30；字号 12.5（比抽屉小半号，因为列只有 420）</td></tr>
+      <tr><td>列宽算法</td><td>同 A：数值列按最长值封顶 118，文本列吃余量；≥ 6 列时首列与行号槽吸左</td></tr>
+      <tr><td>多分支</td><td>列内页签 <code>01 / 02 / 03</code>，每条成功分支一个；页签行只在结果 > 1 时出现</td></tr>
+      <tr><td>快捷键</td><td><code>Alt+5</code> 开/关结果列（与 076 的 <code>Alt 1–4</code> 同一组）</td></tr>
+      <tr><td>画布折角</td><td>不需要：结果列一直可见，归属由链条说明</td></tr>
+    </table>
+
+    <h3>代价</h3>
+    <ul>
+      <li><b>420 是硬上限。</b>8 列的宽表在这里只能看到 3 列多，与现在 560 的卡片是同一类问题，只是从“画布上的卡”换成了“停靠区的列”。</li>
+      <li><b>和概览抢位。</b>076 刚把“最多两列 + LRU 收书脊”的规则立起来，结果列一加入，最常被收掉的就是概览——用户会经历一次“我刚开的面板怎么进书脊了”。</li>
+      <li><b>画布更窄。</b>500 比 076 里最常见的 600 少 100；三步链加上命令卡刚好，四步就要缩。</li>
+      <li><b>它仍然是一块“常驻”面板。</b>结果只在一部分时间有用，却长期占着一列；抽屉（方案 B）可以收起但保留位置，列只能收成 44px 书脊。</li>
+    </ul>
+  </section>
+
+</div>
+</body>
+</html>

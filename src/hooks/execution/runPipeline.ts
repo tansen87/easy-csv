@@ -181,6 +181,7 @@ export async function runPipeline(
               r.branchSteps.length > 0
                 ? `Result: ${r.branchSteps.join(" → ")}`
                 : `Branch ${i + 1}`,
+            steps: r.branchSteps,
             headers: parsed.headers,
             rows: parsed.rows,
             totalRows: parsed.rows.length,
@@ -190,6 +191,10 @@ export async function runPipeline(
       }
     });
     deps.setTabResultPreview(ctx.tabId, previews);
+    // Results used to appear as canvas nodes on their own; the dock replaces
+    // that surface, so opening it here keeps the old "it just showed up"
+    // behaviour (silently ignored for a background tab).
+    if (previews.length > 0) deps.openResults?.(ctx.tabId);
 
     if (deps.trackLineage && !wasCancelled) {
       const headers = currentTab.headers || [];

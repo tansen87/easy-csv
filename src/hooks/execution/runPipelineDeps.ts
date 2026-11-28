@@ -65,6 +65,8 @@ export interface RunPipelineDeps {
     openLogsDir: string;
   };
   setShowLogPanel: (value: boolean) => void;
+  /** Show the results of a run that just finished (design 084). */
+  openResults?: (tabId: string) => void;
   /** Auto-open the drawer when the run starts (071 setting, default off). */
   autoShowLogPanel: boolean;
   /** Ask for the S6 overwrite confirmation on behalf of one run. */

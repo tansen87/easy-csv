@@ -133,13 +133,12 @@ export function useRunFromStep({
         const output = (result.output as string) || "";
         const parsed = parseCsvString(output, 500);
         if (parsed.headers.length > 0) {
-          const branchLabel = suffix
-            .map((step) => step.alias || step.command.name)
-            .join(" → ");
+          const steps = suffix.map((step) => step.alias || step.command.name);
           setTabResultPreview(currentTab.id, [
             {
               id: `result-${Date.now()}-0`,
-              label: `Result: ${branchLabel}`,
+              label: `Result: ${steps.join(" → ")}`,
+              steps,
               headers: parsed.headers,
               rows: parsed.rows,
               totalRows: parsed.rows.length,

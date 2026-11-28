@@ -63,6 +63,7 @@ export const zhCommon = {
   update: "更新",
   collapsePanel: "折叠",
   copyCsv: "复制为 CSV",
+  copyFormat: "选择复制格式",
   copyMarkdown: "复制为 Markdown 表格",
   resultTruncated: "结果已截断为前几行, 请用 output/to 步骤导出完整数据.",
   commandPalette: "命令面板",

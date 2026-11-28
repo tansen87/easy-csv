@@ -18,6 +18,7 @@ export type ShortcutActionId =
   | "execute"
   | "openTemplates"
   | "toggleLogs"
+  | "toggleResults"
   | "toggleAI"
   | "commandPalette";
 
@@ -34,6 +35,7 @@ export const SHORTCUT_ACTION_IDS: ShortcutActionId[] = [
   "openTemplates",
   "commandPalette",
   "toggleLogs",
+  "toggleResults",
   "toggleAI",
 ];
 
@@ -51,6 +53,7 @@ export const DEFAULT_SHORTCUTS: ShortcutMap = {
   openTemplates: "Mod+T",
   commandPalette: "Mod+F",
   toggleLogs: "Alt+Q",
+  toggleResults: "Alt+R",
   toggleAI: "Alt+A",
 };
 

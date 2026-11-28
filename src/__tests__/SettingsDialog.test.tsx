@@ -362,9 +362,11 @@ describe("settings dialog — shortcuts (design 083)", () => {
   it("renders one keycap per action, showing the current binding", () => {
     const { container } = renderDialog();
 
+    // 13 actions: 12 from design 083 plus 结果抽屉 (`Alt+R`, design 084).
     expect(
       container.querySelectorAll('[data-settings-row^="shortcut-"]').length,
-    ).toBe(12);
+    ).toBe(13);
+    expect(keycap(container, "toggleResults").textContent).toMatch(/\+ R$/);
     // Mod is shown as the platform's own key, never as the literal `Mod`.
     expect(keycap(container, "savePipeline").textContent).toMatch(/\+ S$/);
     expect(keycap(container, "savePipeline").textContent).not.toContain("Mod");

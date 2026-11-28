@@ -9,6 +9,13 @@ import { readFile, writeFile } from "@tauri-apps/plugin-fs";
 import { FileClock, NotebookTabs, Command } from "lucide-react";
 
 import { LogPanel } from "@/modules/logs/LogPanel";
+import {
+  BottomDock,
+  type BottomDockTab,
+  type BottomDockTabItem,
+} from "@/components/layout/BottomDock";
+import { ResultMeta, ResultsPanel } from "@/modules/results/ResultsPanel";
+import { resultPanelHeight } from "@/modules/results/lib/resultTable";
 import { ChartPanel } from "@/modules/data-preview/charts/ChartPanel";
 import { SettingsDialog } from "@/components/setting/SettingsDialog";
 import { HomeView } from "@/modules/data-preview/HomeView";
@@ -140,6 +147,9 @@ function AppContent() {
 
   // UI visibility state
   const ui = useUIState();
+  // Stable setters used by effects/callbacks declared before `ui` is fully
+  // consumed (bottom dock tabs, design 084).
+  const { setShowLogPanel, setBottomDockTab } = ui;
 
   // App settings
   const settings = useAppSettings(showToastRef);
@@ -737,6 +747,19 @@ function AppContent() {
     selectedTabId: tabsHook.selectedTabId,
   });
 
+  /**
+   * A run just produced results. Only the tab the user is looking at pulls the
+   * dock open — a background tab finishing must not steal the view.
+   */
+  const openResultsForTab = useCallback(
+    (tabId: string) => {
+      if (tabId !== tabsHook.selectedTabId) return;
+      setBottomDockTab("result:0");
+      setShowLogPanel(true);
+    },
+    [tabsHook.selectedTabId, setBottomDockTab, setShowLogPanel],
+  );
+
   const execution = useExecution({
     selectedTabId: tabsHook.selectedTabId,
     defaultDelimiter: settings.defaultDelimiter,
@@ -749,6 +772,7 @@ function AppContent() {
     addLog,
     setTabs: tabsHook.setTabs,
     setShowLogPanel: ui.setShowLogPanel,
+    openResults: openResultsForTab,
     setShowChartPanel: ui.setShowChartPanel,
     setTabChart: ui.setTabChart,
     formatDateTime,
@@ -768,6 +792,60 @@ function AppContent() {
     confirmVariables,
     cancelVariables,
   } = execution;
+
+  // ── Bottom dock (design 084): 日志 first, then one tab per result branch ──
+  const openLogsDock = useCallback(() => {
+    setBottomDockTab("logs");
+    setShowLogPanel(true);
+  }, [setBottomDockTab, setShowLogPanel]);
+  const onToggleLogPanel = useCallback(() => {
+    if (ui.showLogPanel && ui.bottomDockTab === "logs") {
+      setShowLogPanel(false);
+      return;
+    }
+    openLogsDock();
+  }, [ui.showLogPanel, ui.bottomDockTab, openLogsDock, setShowLogPanel]);
+  const onToggleResultsPanel = useCallback(() => {
+    if (ui.showLogPanel && ui.bottomDockTab.startsWith("result")) {
+      setShowLogPanel(false);
+      return;
+    }
+    // No results yet: land on the log tab rather than a dead key.
+    setBottomDockTab(resultPreview.length > 0 ? "result:0" : "logs");
+    setShowLogPanel(true);
+  }, [
+    ui.showLogPanel,
+    ui.bottomDockTab,
+    resultPreview.length,
+    setBottomDockTab,
+    setShowLogPanel,
+  ]);
+
+  // The dock's tab row: 日志 is always first (design 084 feedback), results
+  // follow. A stale `result:<n>` from a previous run falls back to the first
+  // branch instead of rendering an empty body.
+  const dockResultIndex = useMemo(() => {
+    const match = /^result:(\d+)$/.exec(ui.bottomDockTab);
+    if (!match) return -1;
+    const index = Number(match[1]);
+    if (index >= 0 && index < resultPreview.length) return index;
+    return resultPreview.length > 0 ? 0 : -1;
+  }, [ui.bottomDockTab, resultPreview.length]);
+
+  const dockTabs: BottomDockTabItem[] = useMemo(
+    () => [
+      { id: "logs", label: t.logs, count: logs.length },
+      ...resultPreview.map((result, index) => ({
+        id: `result:${index}` as BottomDockTab,
+        label:
+          resultPreview.length > 1 ? `${t.results} ${index + 1}` : t.results,
+        count: result.truncated
+          ? t.resultTruncatedRows.replace("{n}", String(result.totalRows))
+          : result.totalRows,
+      })),
+    ],
+    [logs.length, resultPreview, t.logs, t.results, t.resultTruncatedRows],
+  );
 
   // ── Per-tab execution state (design 028 §5) ───────────────────────────────
   // The toolbar button, progress pill and cancel all follow the *current* tab;
@@ -1257,7 +1335,8 @@ function AppContent() {
         setSelectedStep(null);
       },
       onExecute: handleExecuteAndMarkSaved,
-      onLogs: () => ui.setShowLogPanel(!ui.showLogPanel),
+      onLogs: onToggleLogPanel,
+      onResults: onToggleResultsPanel,
       onAI: () => ui.setShowAIPanel(!ui.showAIPanel),
       onCommandPalette: () => ui.setShowCommandPalette(!ui.showCommandPalette),
       onOpenTemplates: openTemplates,
@@ -1375,10 +1454,6 @@ function AppContent() {
     ui.setShowHelp(true);
   }, [effectiveLanguage, t.helpCenter, ui]);
 
-  const onToggleLogPanel = useCallback(
-    () => ui.setShowLogPanel(!ui.showLogPanel),
-    [ui.showLogPanel],
-  );
   const onShowSettings = useCallback(() => ui.setShowSettingsDialog(true), []);
 
   /** Export the filtered log lines the drawer shows (design 071 §2.5). */
@@ -1614,542 +1689,576 @@ function AppContent() {
 
   return (
     <ToolRunProvider runs={toolRuns.runs} actions={toolRuns.actions}>
-    <>
-      {
-        <div className="app-window h-screen relative overflow-hidden">
-          <WindowResizeHandles />
-          <header
-            ref={headerRef}
-            className={
-              usesCustomTitleBar
-                ? "app-header app-titlebar absolute top-0 left-0 right-0 h-9 flex items-center pl-4 z-chrome"
-                : "app-header absolute top-0 left-0 right-0 h-9 flex items-center px-4 gap-4 z-chrome"
-            }
-            onContextMenu={(e) => e.preventDefault()}
-            // The whole bar drags and double-clicks to maximise; buttons and
-            // menu items opt out automatically because Tauri stops the walk
-            // at clickable elements (see its drag.js).
-            data-tauri-drag-region={usesCustomTitleBar ? "deep" : undefined}
-          >
-            {usesCustomTitleBar && <TitleBarBrand />}
-            <CommandBar
-              items={paletteItems}
-              isOpen={ui.showCommandPalette}
-              onOpenChange={ui.setShowCommandPalette}
-              highlight={showOnboardingGuide}
-            />
-            <div className="flex min-w-0 flex-1 items-center">
-              <MainMenu
-                activeMenu={ui.activeMenu}
-                setActiveMenu={ui.setActiveMenu}
-                isMenuActivated={ui.isMenuActivated}
-                setIsMenuActivated={ui.setIsMenuActivated}
-                undoStack={pipeline.undoStack}
-                redoStack={pipeline.redoStack}
-                onUndo={() => {
-                  pipeline.undo();
-                  setSelectedStep(null);
-                }}
-                onRedo={() => {
-                  pipeline.redo();
-                  setSelectedStep(null);
-                }}
-                tabs={tabsHook.tabs}
-                runs={execution.runs}
-                currentTabId={tabsHook.selectedTabId}
-                onSelectTab={tabsHook.setSelectedTabId}
-                onRunTab={handleRunTab}
-                onCancelTab={handleCancelTab}
-                onOpenFile={handleOpenFile}
-                onOpenNewTabWithFile={handleOpenNewTabWithFile}
-                onSavePipeline={handleSavePipelineAndMarkSaved}
-                onImportPipeline={handleImportPipeline}
-                onExportPipeline={handleExportPipelineAndMarkSaved}
-                onUseOrSaveTemplate={openTemplates}
-                onLoadDemo={handleLoadDemo}
-                onHelp={onHelp}
-                onReportIssue={() =>
-                  void handleOpenUrl(
-                    "https://github.com/tansen87/easy-csv/issues/",
-                  )
-                }
-                onCheckUpdate={() => void checkForUpdates()}
-                onShowAbout={() => setShowAbout(true)}
-                onShowSettings={onShowSettings}
-                onOpenPalette={() => ui.setShowCommandPalette(true)}
-                onOpenCsvDiff={() => {
-                  ui.setCsvDiffInitialFileA(
-                    tabsHook.getCurrentTab()?.inputFile || undefined,
-                  );
-                  ui.setShowCsvDiff(true);
-                }}
-                onOpenCsvEncoding={() => {
-                  ui.setCsvEncodingInitialInput(
-                    tabsHook.getCurrentTab()?.inputFile || undefined,
-                  );
-                  ui.setShowCsvEncoding(true);
-                }}
-                onOpenSeparateCsv={() => {
-                  ui.setSeparateCsvInitialInput(
-                    tabsHook.getCurrentTab()?.inputFile || undefined,
-                  );
-                  ui.setShowSeparateCsv(true);
-                }}
-                onOpenCleanChars={() => {
-                  ui.setCleanCharsInitialInput(
-                    tabsHook.getCurrentTab()?.inputFile || undefined,
-                  );
-                  ui.setShowCleanChars(true);
-                }}
-                onOpenSplitLines={() => {
-                  ui.setSplitLinesInitialInput(
-                    tabsHook.getCurrentTab()?.inputFile || undefined,
-                  );
-                  ui.setShowSplitLines(true);
-                }}
-                onOpenEnumerateByGroup={() => {
-                  ui.setEnumerateByGroupInitialInput(
-                    tabsHook.getCurrentTab()?.inputFile || undefined,
-                  );
-                  ui.setShowEnumerateByGroup(true);
-                }}
-                onOpenCsvToExcel={() => {
-                  ui.setCsvToExcelInitialInput(
-                    tabsHook.getCurrentTab()?.inputFile || undefined,
-                  );
-                  ui.setShowCsvToExcel(true);
-                }}
-                onOpenMergeExcel={() => {
-                  ui.setMergeExcelInitialInput(
-                    tabsHook.getCurrentTab()?.inputFile || undefined,
-                  );
-                  ui.setShowMergeExcel(true);
-                }}
-                isExecuting={isExecuting}
-                maxConcurrentRuns={settings.maxConcurrentRuns}
-                isCheckingUpdate={updater.isChecking}
-                hasUpdate={!!updater.updateInfo?.available}
-                updateVersion={updater.updateInfo?.version}
-                currentVersion={
-                  updater.appVersion ?? updater.updateInfo?.currentVersion
-                }
-                showSettingsDialog={ui.showSettingsDialog}
-                showLogErrorBadge={
-                  !ui.showLogPanel && logs.some((l) => l.type === "error")
-                }
-                currentPipelineLength={tabsHook.getCurrentPipeline().length}
-                toolRuns={toolRuns.runs}
-                showLogPanel={ui.showLogPanel}
-                onToggleLogPanel={onToggleLogPanel}
-                activeViewPanel={viewDock.activePanel}
-                viewPanels={viewPanelMenuItems}
-                onSelectViewPanel={viewDock.togglePanel}
-                showAIPanel={ui.showAIPanel}
-                onToggleAIPanel={() => ui.setShowAIPanel(!ui.showAIPanel)}
-                pendingVariables={pendingVariableCount}
-              />
-            </div>
-            {usesCustomTitleBar && <WindowControls />}
-          </header>
-
-          <main className="absolute inset-0 flex flex-col overflow-hidden">
-            {/* Canvas and the right-hand dock share one row, so the dock is a
-                real column instead of an overlay (design 076). AI is still
-                fixed to the window edge; its width is reserved here. */}
-            <div
-              className="flex flex-1 overflow-hidden"
-              style={{ paddingRight: aiDockWidth }}
+      <>
+        {
+          <div className="app-window h-screen relative overflow-hidden">
+            <WindowResizeHandles />
+            <header
+              ref={headerRef}
+              className={
+                usesCustomTitleBar
+                  ? "app-header app-titlebar absolute top-0 left-0 right-0 h-9 flex items-center pl-4 z-chrome"
+                  : "app-header absolute top-0 left-0 right-0 h-9 flex items-center px-4 gap-4 z-chrome"
+              }
+              onContextMenu={(e) => e.preventDefault()}
+              // The whole bar drags and double-clicks to maximise; buttons and
+              // menu items opt out automatically because Tauri stops the walk
+              // at clickable elements (see its drag.js).
+              data-tauri-drag-region={usesCustomTitleBar ? "deep" : undefined}
             >
-              <div className="min-w-0 flex-1">
-                <HomeView
+              {usesCustomTitleBar && <TitleBarBrand />}
+              <CommandBar
+                items={paletteItems}
+                isOpen={ui.showCommandPalette}
+                onOpenChange={ui.setShowCommandPalette}
+                highlight={showOnboardingGuide}
+              />
+              <div className="flex min-w-0 flex-1 items-center">
+                <MainMenu
+                  activeMenu={ui.activeMenu}
+                  setActiveMenu={ui.setActiveMenu}
+                  isMenuActivated={ui.isMenuActivated}
+                  setIsMenuActivated={ui.setIsMenuActivated}
+                  undoStack={pipeline.undoStack}
+                  redoStack={pipeline.redoStack}
+                  onUndo={() => {
+                    pipeline.undo();
+                    setSelectedStep(null);
+                  }}
+                  onRedo={() => {
+                    pipeline.redo();
+                    setSelectedStep(null);
+                  }}
                   tabs={tabsHook.tabs}
-                  selectedTabId={tabsHook.selectedTabId}
-                  onTabChange={tabsHook.setSelectedTabId}
-                  onRemoveTab={handleRemoveTab}
-                  onRenameTab={tabsHook.renameTab}
-                  resultPreview={resultPreview}
-                  onAddCommand={handleCommandClick}
-                  onStepClick={handleStepClick}
-                  onStepUpdate={handleStepUpdate}
-                  onStepAliasUpdate={handleStepAliasUpdate}
-                  onStepDelete={handleStepRemove}
-                  onTableDelete={handleClearInputData}
-                  onPipelineReorder={pipeline.updateTabPipeline}
-                  onEdgesChange={onEdgesChange}
-                  onInputPositionChange={onInputPositionChange}
+                  runs={execution.runs}
+                  currentTabId={tabsHook.selectedTabId}
+                  onSelectTab={tabsHook.setSelectedTabId}
+                  onRunTab={handleRunTab}
+                  onCancelTab={handleCancelTab}
                   onOpenFile={handleOpenFile}
-                  onImportPipeline={handleImportPipeline}
-                  onOpenUrl={handleOpenUrl}
-                  branchProgress={currentRun?.branch ?? null}
-                  showProgressBar={!!currentRun?.showProgress}
-                  otherRunningCount={otherRunningCount}
-                  tabRuns={execution.runs}
-                  isExecuting={isExecuting}
-                  onCancelExecution={() =>
-                    void execution.cancelRun(tabsHook.selectedTabId)
-                  }
-                  recentFiles={tabsHook.recentFiles}
-                  onOpenRecentFile={onOpenRecentFile}
-                  reactFlowInstanceRef={reactFlowInstanceRef}
-                  pipelineSavedAt={pipelineSavedAt}
-                  doubleClickFitView={settings.doubleClickFitView}
+                  onOpenNewTabWithFile={handleOpenNewTabWithFile}
                   onSavePipeline={handleSavePipelineAndMarkSaved}
-                  onSaveIntermediate={handleSaveIntermediateAsInput}
-                  onRunFromStep={handleRunFromStep}
-                  delimiter={tabsHook.getCurrentTab()?.defaultDelimiter}
-                  delimiterMode={delimiterMode}
-                  delimiterSource={tabsHook.getCurrentTab()?.delimiterSource}
-                  delimiterConfidence={
-                    tabsHook.getCurrentTab()?.delimiterConfidence
-                  }
-                  inputFormat={tabsHook.getCurrentTab()?.inputFormat}
-                  sourceTable={tabsHook.getCurrentTab()?.sourceTable}
-                  onDelimiterChange={onDelimiterModeChange}
-                  showOnboardingGuide={showOnboardingGuide}
-                  commandCount={xanCommands.length}
-                  onOpenCommandSearch={() => ui.setShowCommandPalette(true)}
-                  onShowCommandHelp={showCommandHelp}
-                  onOpenAIPanel={() => ui.setShowAIPanel(true)}
+                  onImportPipeline={handleImportPipeline}
+                  onExportPipeline={handleExportPipelineAndMarkSaved}
+                  onUseOrSaveTemplate={openTemplates}
                   onLoadDemo={handleLoadDemo}
-                  onDismissOnboardingGuide={onboarding.markSeen}
-                  demoReveal={demoRevealPill}
-                  onAdvanceDemoReveal={handleAdvanceDemoReveal}
-                  onSkipDemoReveal={handleSkipDemoReveal}
+                  onHelp={onHelp}
+                  onReportIssue={() =>
+                    void handleOpenUrl(
+                      "https://github.com/tansen87/easy-csv/issues/",
+                    )
+                  }
+                  onCheckUpdate={() => void checkForUpdates()}
+                  onShowAbout={() => setShowAbout(true)}
+                  onShowSettings={onShowSettings}
+                  onOpenPalette={() => ui.setShowCommandPalette(true)}
+                  onOpenCsvDiff={() => {
+                    ui.setCsvDiffInitialFileA(
+                      tabsHook.getCurrentTab()?.inputFile || undefined,
+                    );
+                    ui.setShowCsvDiff(true);
+                  }}
+                  onOpenCsvEncoding={() => {
+                    ui.setCsvEncodingInitialInput(
+                      tabsHook.getCurrentTab()?.inputFile || undefined,
+                    );
+                    ui.setShowCsvEncoding(true);
+                  }}
+                  onOpenSeparateCsv={() => {
+                    ui.setSeparateCsvInitialInput(
+                      tabsHook.getCurrentTab()?.inputFile || undefined,
+                    );
+                    ui.setShowSeparateCsv(true);
+                  }}
+                  onOpenCleanChars={() => {
+                    ui.setCleanCharsInitialInput(
+                      tabsHook.getCurrentTab()?.inputFile || undefined,
+                    );
+                    ui.setShowCleanChars(true);
+                  }}
+                  onOpenSplitLines={() => {
+                    ui.setSplitLinesInitialInput(
+                      tabsHook.getCurrentTab()?.inputFile || undefined,
+                    );
+                    ui.setShowSplitLines(true);
+                  }}
+                  onOpenEnumerateByGroup={() => {
+                    ui.setEnumerateByGroupInitialInput(
+                      tabsHook.getCurrentTab()?.inputFile || undefined,
+                    );
+                    ui.setShowEnumerateByGroup(true);
+                  }}
+                  onOpenCsvToExcel={() => {
+                    ui.setCsvToExcelInitialInput(
+                      tabsHook.getCurrentTab()?.inputFile || undefined,
+                    );
+                    ui.setShowCsvToExcel(true);
+                  }}
+                  onOpenMergeExcel={() => {
+                    ui.setMergeExcelInitialInput(
+                      tabsHook.getCurrentTab()?.inputFile || undefined,
+                    );
+                    ui.setShowMergeExcel(true);
+                  }}
+                  isExecuting={isExecuting}
+                  maxConcurrentRuns={settings.maxConcurrentRuns}
+                  isCheckingUpdate={updater.isChecking}
+                  hasUpdate={!!updater.updateInfo?.available}
+                  updateVersion={updater.updateInfo?.version}
+                  currentVersion={
+                    updater.appVersion ?? updater.updateInfo?.currentVersion
+                  }
+                  showSettingsDialog={ui.showSettingsDialog}
+                  showLogErrorBadge={
+                    !ui.showLogPanel && logs.some((l) => l.type === "error")
+                  }
+                  currentPipelineLength={tabsHook.getCurrentPipeline().length}
+                  toolRuns={toolRuns.runs}
+                  showLogPanel={ui.showLogPanel}
+                  onToggleLogPanel={onToggleLogPanel}
+                  activeViewPanel={viewDock.activePanel}
+                  viewPanels={viewPanelMenuItems}
+                  onSelectViewPanel={viewDock.togglePanel}
+                  showAIPanel={ui.showAIPanel}
+                  onToggleAIPanel={() => ui.setShowAIPanel(!ui.showAIPanel)}
+                  pendingVariables={pendingVariableCount}
                 />
               </div>
+              {usesCustomTitleBar && <WindowControls />}
+            </header>
 
-              <ViewDock
-                activePanel={viewDock.activePanel}
-                onSelectPanel={viewDock.togglePanel}
-                width={viewDock.panelWidth}
-                onWidthChange={viewDock.setWidth}
+            <main className="absolute inset-0 flex flex-col overflow-hidden">
+              {/* Canvas and the right-hand dock share one row, so the dock is a
+                real column instead of an overlay (design 076). AI is still
+                fixed to the window edge; its width is reserved here. */}
+              <div
+                className="flex flex-1 overflow-hidden"
+                style={{ paddingRight: aiDockWidth }}
               >
-                {viewDock.activePanel === "profile" && (
-                  <DataProfilePanel
-                    filePath={tabsHook.getCurrentTab()?.inputFile || ""}
-                    delimiter={tabsCtl.resolveRunDelimiter()}
-                    isVisible
-                    onClose={viewDock.closeDock}
-                  />
-                )}
-                {viewDock.activePanel === "version" && (
-                  <VersionControlPanel
-                    versions={versionsHook.getCurrentVersions()}
-                    currentVersionId={
-                      tabsHook.getCurrentTab()?.currentVersionId
+                <div className="min-w-0 flex-1">
+                  <HomeView
+                    tabs={tabsHook.tabs}
+                    selectedTabId={tabsHook.selectedTabId}
+                    onTabChange={tabsHook.setSelectedTabId}
+                    onRemoveTab={handleRemoveTab}
+                    onRenameTab={tabsHook.renameTab}
+                    onAddCommand={handleCommandClick}
+                    onStepClick={handleStepClick}
+                    onStepUpdate={handleStepUpdate}
+                    onStepAliasUpdate={handleStepAliasUpdate}
+                    onStepDelete={handleStepRemove}
+                    onTableDelete={handleClearInputData}
+                    onPipelineReorder={pipeline.updateTabPipeline}
+                    onEdgesChange={onEdgesChange}
+                    onInputPositionChange={onInputPositionChange}
+                    onOpenFile={handleOpenFile}
+                    onImportPipeline={handleImportPipeline}
+                    onOpenUrl={handleOpenUrl}
+                    branchProgress={currentRun?.branch ?? null}
+                    showProgressBar={!!currentRun?.showProgress}
+                    otherRunningCount={otherRunningCount}
+                    tabRuns={execution.runs}
+                    isExecuting={isExecuting}
+                    onCancelExecution={() =>
+                      void execution.cancelRun(tabsHook.selectedTabId)
                     }
-                    currentSnapshot={currentSnapshot}
-                    onSaveVersion={handleSaveVersionAndMarkSaved}
-                    onRestoreVersion={versionsHook.restoreVersion}
-                    onDeleteVersion={versionsHook.deleteVersion}
-                    onAddTag={versionsHook.addTag}
-                    onRemoveTag={versionsHook.removeTag}
-                    onRenameVersion={versionsHook.renameVersion}
-                    onClearAllVersions={versionsHook.clearAllVersions}
-                    isSaving={versionsHook.isSavingVersion}
-                    onClose={viewDock.closeDock}
+                    recentFiles={tabsHook.recentFiles}
+                    onOpenRecentFile={onOpenRecentFile}
+                    reactFlowInstanceRef={reactFlowInstanceRef}
+                    pipelineSavedAt={pipelineSavedAt}
+                    doubleClickFitView={settings.doubleClickFitView}
+                    onSavePipeline={handleSavePipelineAndMarkSaved}
+                    onSaveIntermediate={handleSaveIntermediateAsInput}
+                    onRunFromStep={handleRunFromStep}
+                    delimiter={tabsHook.getCurrentTab()?.defaultDelimiter}
+                    delimiterMode={delimiterMode}
+                    delimiterSource={tabsHook.getCurrentTab()?.delimiterSource}
+                    delimiterConfidence={
+                      tabsHook.getCurrentTab()?.delimiterConfidence
+                    }
+                    inputFormat={tabsHook.getCurrentTab()?.inputFormat}
+                    sourceTable={tabsHook.getCurrentTab()?.sourceTable}
+                    onDelimiterChange={onDelimiterModeChange}
+                    showOnboardingGuide={showOnboardingGuide}
+                    commandCount={xanCommands.length}
+                    onOpenCommandSearch={() => ui.setShowCommandPalette(true)}
+                    onShowCommandHelp={showCommandHelp}
+                    onOpenAIPanel={() => ui.setShowAIPanel(true)}
+                    onLoadDemo={handleLoadDemo}
+                    onDismissOnboardingGuide={onboarding.markSeen}
+                    demoReveal={demoRevealPill}
+                    onAdvanceDemoReveal={handleAdvanceDemoReveal}
+                    onSkipDemoReveal={handleSkipDemoReveal}
                   />
-                )}
-                {viewDock.activePanel === "lineage" && (
-                  <DataLineagePanel
-                    lineageData={lineageHook.lineageData}
-                    onSaveLineage={handleExportLineage}
-                    onClose={viewDock.closeDock}
-                  />
-                )}
-                {viewDock.activePanel === "variables" && (
-                  <VariablePanel
-                    steps={tabsHook.getCurrentTab()?.pipeline || []}
-                    variables={tabsHook.getCurrentTab()?.variables || []}
-                    onChange={onVariablesChange}
-                    onClose={viewDock.closeDock}
-                  />
-                )}
-              </ViewDock>
-            </div>
-          </main>
+                </div>
 
-          <LogPanel
-            logs={logs}
-            onClear={clearLogs}
-            onRemoveLog={removeLog}
-            isVisible={ui.showLogPanel}
-            onClose={() => ui.setShowLogPanel(false)}
-            onShowHistory={() => {
-              dialogs.open("history");
-              executionHistory.loadHistory();
-            }}
-            onExport={(text) => void handleExportLogs(text)}
-            onOpenLogsDir={handleOpenLogsDir}
-            onRerun={handleRerunFromLog}
-            dockState={session.panelStates.logPanel}
-            onDockChange={(patch) =>
-              session.updatePanelState("logPanel", patch)
-            }
-            selectedTabId={tabsHook.selectedTabId}
-            tabs={tabsHook.tabs}
-            rightInset={aiDockWidth + viewDock.dockWidth}
-          />
+                <ViewDock
+                  activePanel={viewDock.activePanel}
+                  onSelectPanel={viewDock.togglePanel}
+                  width={viewDock.panelWidth}
+                  onWidthChange={viewDock.setWidth}
+                >
+                  {viewDock.activePanel === "profile" && (
+                    <DataProfilePanel
+                      filePath={tabsHook.getCurrentTab()?.inputFile || ""}
+                      delimiter={tabsCtl.resolveRunDelimiter()}
+                      isVisible
+                      onClose={viewDock.closeDock}
+                    />
+                  )}
+                  {viewDock.activePanel === "version" && (
+                    <VersionControlPanel
+                      versions={versionsHook.getCurrentVersions()}
+                      currentVersionId={
+                        tabsHook.getCurrentTab()?.currentVersionId
+                      }
+                      currentSnapshot={currentSnapshot}
+                      onSaveVersion={handleSaveVersionAndMarkSaved}
+                      onRestoreVersion={versionsHook.restoreVersion}
+                      onDeleteVersion={versionsHook.deleteVersion}
+                      onAddTag={versionsHook.addTag}
+                      onRemoveTag={versionsHook.removeTag}
+                      onRenameVersion={versionsHook.renameVersion}
+                      onClearAllVersions={versionsHook.clearAllVersions}
+                      isSaving={versionsHook.isSavingVersion}
+                      onClose={viewDock.closeDock}
+                    />
+                  )}
+                  {viewDock.activePanel === "lineage" && (
+                    <DataLineagePanel
+                      lineageData={lineageHook.lineageData}
+                      onSaveLineage={handleExportLineage}
+                      onClose={viewDock.closeDock}
+                    />
+                  )}
+                  {viewDock.activePanel === "variables" && (
+                    <VariablePanel
+                      steps={tabsHook.getCurrentTab()?.pipeline || []}
+                      variables={tabsHook.getCurrentTab()?.variables || []}
+                      onChange={onVariablesChange}
+                      onClose={viewDock.closeDock}
+                    />
+                  )}
+                </ViewDock>
+              </div>
+            </main>
 
-          <ExecutionHistoryDialog
-            isOpen={dialogs.isOpen("history")}
-            onClose={() => dialogs.close("history")}
-            history={executionHistory.history}
-            loading={executionHistory.loading}
-            onRefresh={executionHistory.loadHistory}
-          />
-
-          <ChartPanel
-            config={ui.chartsByTab[tabsHook.selectedTabId]?.config ?? null}
-            series={ui.chartsByTab[tabsHook.selectedTabId]?.series ?? []}
-            isVisible={ui.showChartPanel}
-            onClose={() => ui.setShowChartPanel(false)}
-            dockState={session.panelStates.chartPanel}
-            onDockChange={(patch) =>
-              session.updatePanelState("chartPanel", patch)
-            }
-            capsuleY={collapsedStack.chartPanel}
-            capsuleRight={8 + aiDockWidth + viewDock.dockWidth}
-            chartState={ui.chartsByTab[tabsHook.selectedTabId] ?? null}
-          />
-
-          <HelpDialog
-            isOpen={ui.showHelp}
-            onClose={() => ui.setShowHelp(false)}
-            commandName={ui.helpCommandName}
-            content={ui.helpContent}
-          />
-
-          <AboutDialog isOpen={showAbout} onClose={() => setShowAbout(false)} />
-
-          <ToastContainer toasts={toasts} onRemove={removeToastRef.current} />
-
-          <SettingsDialog
-            isOpen={ui.showSettingsDialog}
-            onClose={() => ui.setShowSettingsDialog(false)}
-            delimiterMode={delimiterMode}
-            onDelimiterModeChange={onDelimiterModeChange}
-            noHeaders={settings.noHeaders}
-            onNoHeadersChange={settings.setNoHeaders}
-            systemNotification={settings.systemNotification}
-            onSystemNotificationChange={settings.setSystemNotification}
-            minimizeToTray={settings.minimizeToTray}
-            onMinimizeToTrayChange={settings.setMinimizeToTray}
-            doubleClickFitView={settings.doubleClickFitView}
-            onDoubleClickFitViewChange={settings.setDoubleClickFitView}
-            autoCheckUpdate={settings.autoCheckUpdate}
-            onAutoCheckUpdateChange={settings.setAutoCheckUpdate}
-            maxConcurrentRuns={settings.maxConcurrentRuns}
-            onMaxConcurrentRunsChange={settings.setMaxConcurrentRuns}
-            logRetentionDays={settings.logRetentionDays}
-            onLogRetentionDaysChange={settings.setLogRetentionDays}
-            autoShowLogPanel={settings.autoShowLogPanel}
-            onAutoShowLogPanelChange={settings.setAutoShowLogPanel}
-            onOpenLogsDir={handleOpenLogsDir}
-            onResetOnboarding={onboarding.reset}
-            shortcuts={shortcutsUi.shortcuts}
-            onShortcutChange={shortcutsUi.setShortcut}
-            onResetShortcuts={shortcutsUi.resetShortcuts}
-            onSave={handleSaveSettings}
-            aiConfig={aiConfig}
-            onAIConfigChange={handleAIConfigChange}
-            showToast={showToast}
-          />
-
-          <UpdateDialog
-            isOpen={ui.showUpdateDialog}
-            onClose={() => ui.setShowUpdateDialog(false)}
-            updateInfo={updater.updateInfo}
-            installForm={updater.installForm}
-            isInstalling={updater.isInstalling}
-            progress={updater.progress}
-            error={updater.error}
-            onInstall={() => void updater.install()}
-          />
-
-          {/* One-time guidance: without xan almost every command fails, so this
-              is worth interrupting for exactly once per launch. */}
-          {xanCheck.missingXan && (
-            <PluginSetupDialog
-              onClose={xanCheck.dismiss}
-              onInstalled={xanCheck.recheck}
-            />
-          )}
-
-          <ConfirmDialog
-            isOpen={ui.showRefreshDialog}
-            title={t.refreshTitle}
-            message={t.refreshMessage}
-            confirmLabel={t.historyRefresh}
-            onConfirm={() => {
-              ui.setShowRefreshDialog(false);
-              window.location.reload();
-            }}
-            onCancel={() => ui.setShowRefreshDialog(false)}
-          />
-
-          {/* Several branches - or another tab - overwriting the same output file */}
-          <ConfirmDialog
-            isOpen={overwriteConfirm !== null}
-            title={
-              overwriteConfirm?.reason === "crossTab"
-                ? t.crossTabOverwriteTitle
-                : t.branchOverwriteTitle
-            }
-            message={
-              overwriteConfirm
-                ? overwriteConfirm.reason === "crossTab"
-                  ? t.crossTabOverwriteMessage
-                      .replace("{name}", overwriteConfirm.otherTabName ?? "")
-                      .replace("{path}", overwriteConfirm.outputPath)
-                  : t.branchOverwriteMessage.replace(
-                      "{count}",
-                      String(overwriteConfirm.branchCount),
+            <BottomDock
+              open={ui.showLogPanel}
+              activeTab={
+                dockResultIndex >= 0 ? `result:${dockResultIndex}` : "logs"
+              }
+              onTabChange={(tab) => ui.setBottomDockTab(tab)}
+              onClose={() => ui.setShowLogPanel(false)}
+              tabs={dockTabs}
+              preferredHeight={
+                dockResultIndex >= 0
+                  ? resultPanelHeight(
+                      resultPreview[dockResultIndex].rows.length,
                     )
-                : ""
-            }
-            detail={
-              overwriteConfirm?.reason === "crossTab"
-                ? undefined
-                : overwriteConfirm?.outputPath
-            }
-            confirmLabel={t.overwrite}
-            onConfirm={() => void confirmOverwriteExecution()}
-            onCancel={cancelOverwriteExecution}
-          />
+                  : undefined
+              }
+              meta={
+                dockResultIndex >= 0 ? (
+                  <ResultMeta
+                    result={resultPreview[dockResultIndex]}
+                    index={dockResultIndex}
+                  />
+                ) : null
+              }
+              panel={
+                dockResultIndex >= 0 ? (
+                  <ResultsPanel result={resultPreview[dockResultIndex]} />
+                ) : null
+              }
+              dockState={session.panelStates.logPanel}
+              onDockChange={(patch) =>
+                session.updatePanelState("logPanel", patch)
+              }
+              rightInset={aiDockWidth + viewDock.dockWidth}
+            >
+              <LogPanel
+                embedded
+                embeddedActive={dockResultIndex < 0}
+                logs={logs}
+                onClear={clearLogs}
+                onRemoveLog={removeLog}
+                isVisible={ui.showLogPanel}
+                onClose={() => ui.setShowLogPanel(false)}
+                onShowHistory={() => {
+                  dialogs.open("history");
+                  executionHistory.loadHistory();
+                }}
+                onExport={(text) => void handleExportLogs(text)}
+                onOpenLogsDir={handleOpenLogsDir}
+                onRerun={handleRerunFromLog}
+                selectedTabId={tabsHook.selectedTabId}
+                tabs={tabsHook.tabs}
+              />
+            </BottomDock>
 
-          <PipelineTemplateDialog
-            isOpen={showTemplateDialog}
-            onClose={() => dialogs.close("templates")}
-            templates={templateStore.templates}
-            canSave={currentPipelineLength > 0}
-            currentStepCount={currentPipelineLength}
-            defaultName={tabsHook.getCurrentTab()?.name || "Pipeline"}
-            onSave={(name, description) =>
-              void handleUseOrSaveTemplate(name, description)
-            }
-            onApply={(id) => void handleApplyTemplate(id)}
-            onRename={(id, name, description) =>
-              void handleRenameTemplate(id, name, description)
-            }
-            onDelete={(id) => {
-              const tpl = templateStore.templates.find((t) => t.id === id);
-              if (tpl) setTemplateToDelete(tpl);
-            }}
-            onExport={(id) => void handleExportTemplate(id)}
-            onImport={() => void handleImportTemplate()}
-          />
-
-          <ConfirmDialog
-            isOpen={templateToDelete !== null}
-            title={t.confirmDeleteTemplate}
-            message={t.confirmDeleteTemplateBody}
-            detail={templateToDelete?.name}
-            tone="danger"
-            confirmLabel={t.templateDelete}
-            onConfirm={confirmDeleteTemplate}
-            onCancel={() => setTemplateToDelete(null)}
-          />
-
-          <CsvDiffDialog
-            isOpen={ui.showCsvDiff}
-            onClose={() => ui.setShowCsvDiff(false)}
-            defaultDelimiter={settings.defaultDelimiter}
-            initialFileA={ui.csvDiffInitialFileA}
-            onShowToast={showToast}
-          />
-
-          <CsvEncodingDialog
-            isOpen={ui.showCsvEncoding}
-            onClose={() => ui.setShowCsvEncoding(false)}
-            initialInputFile={ui.csvEncodingInitialInput}
-            onShowToast={showToast}
-          />
-
-          <SeparateCSVDialog
-            isOpen={ui.showSeparateCsv}
-            onClose={() => ui.setShowSeparateCsv(false)}
-            initialInputFile={ui.separateCsvInitialInput}
-            defaultDelimiter={settings.defaultDelimiter}
-            onDefaultDelimiterChange={settings.setDefaultDelimiter}
-            onShowToast={showToast}
-          />
-
-          <CleanCharsDialog
-            isOpen={ui.showCleanChars}
-            onClose={() => ui.setShowCleanChars(false)}
-            initialInputFile={ui.cleanCharsInitialInput}
-            onShowToast={showToast}
-          />
-
-          <SplitLinesDialog
-            isOpen={ui.showSplitLines}
-            onClose={() => ui.setShowSplitLines(false)}
-            initialInputFile={ui.splitLinesInitialInput}
-            onShowToast={showToast}
-          />
-
-          <EnumerateByGroupDialog
-            isOpen={ui.showEnumerateByGroup}
-            onClose={() => ui.setShowEnumerateByGroup(false)}
-            initialInputFile={ui.enumerateByGroupInitialInput}
-            defaultDelimiter={settings.defaultDelimiter}
-            onShowToast={showToast}
-          />
-
-          <CsvToExcelDialog
-            isOpen={ui.showCsvToExcel}
-            onClose={() => ui.setShowCsvToExcel(false)}
-            initialInputFile={ui.csvToExcelInitialInput}
-            defaultDelimiter={settings.defaultDelimiter}
-            onShowToast={showToast}
-          />
-
-          {/* Excel multi-file merge (design 025) */}
-          <MergeExcelDialog
-            isOpen={ui.showMergeExcel}
-            onClose={() => ui.setShowMergeExcel(false)}
-            initialInputFile={ui.mergeExcelInitialInput}
-            onShowToast={showToast}
-          />
-
-          {/* .duckdb table picker (design 024) */}
-          {duckdbTableDialog && (
-            <DuckdbTableDialog
-              filePath={duckdbTableDialog.filePath}
-              tables={duckdbTableDialog.tables}
-              onPick={(table) => resolveDuckdbTable(table)}
-              onClose={() => resolveDuckdbTable(null)}
+            <ExecutionHistoryDialog
+              isOpen={dialogs.isOpen("history")}
+              onClose={() => dialogs.close("history")}
+              history={executionHistory.history}
+              loading={executionHistory.loading}
+              onRefresh={executionHistory.loadHistory}
             />
-          )}
 
-          <AIPanel
-            isVisible={ui.showAIPanel}
-            onClose={() => {
-              ui.setShowAIPanel(false);
-              setAiHistoryOpen(false);
-            }}
-            historyOpen={aiHistoryOpen}
-            onHistoryOpenChange={setAiHistoryOpen}
-            context={{
-              headers: tabsHook.getCurrentTab()?.headers || [],
-              pipelineSteps: tabsHook.getCurrentPipeline().length,
-              inputFile: tabsHook.getCurrentTab()?.inputFile,
-            }}
-            onAddCommand={handleCommandClick}
-            onAddCommands={handleCommandsClick}
-          />
-
-          {variablePrompt && (
-            <VariableValuesDialog
-              prompt={variablePrompt}
-              onConfirm={confirmVariables}
-              onCancel={cancelVariables}
+            <ChartPanel
+              config={ui.chartsByTab[tabsHook.selectedTabId]?.config ?? null}
+              series={ui.chartsByTab[tabsHook.selectedTabId]?.series ?? []}
+              isVisible={ui.showChartPanel}
+              onClose={() => ui.setShowChartPanel(false)}
+              dockState={session.panelStates.chartPanel}
+              onDockChange={(patch) =>
+                session.updatePanelState("chartPanel", patch)
+              }
+              capsuleY={collapsedStack.chartPanel}
+              capsuleRight={8 + aiDockWidth + viewDock.dockWidth}
+              chartState={ui.chartsByTab[tabsHook.selectedTabId] ?? null}
             />
-          )}
-        </div>
-      }
-    </>
+
+            <HelpDialog
+              isOpen={ui.showHelp}
+              onClose={() => ui.setShowHelp(false)}
+              commandName={ui.helpCommandName}
+              content={ui.helpContent}
+            />
+
+            <AboutDialog
+              isOpen={showAbout}
+              onClose={() => setShowAbout(false)}
+            />
+
+            <ToastContainer toasts={toasts} onRemove={removeToastRef.current} />
+
+            <SettingsDialog
+              isOpen={ui.showSettingsDialog}
+              onClose={() => ui.setShowSettingsDialog(false)}
+              delimiterMode={delimiterMode}
+              onDelimiterModeChange={onDelimiterModeChange}
+              noHeaders={settings.noHeaders}
+              onNoHeadersChange={settings.setNoHeaders}
+              systemNotification={settings.systemNotification}
+              onSystemNotificationChange={settings.setSystemNotification}
+              minimizeToTray={settings.minimizeToTray}
+              onMinimizeToTrayChange={settings.setMinimizeToTray}
+              doubleClickFitView={settings.doubleClickFitView}
+              onDoubleClickFitViewChange={settings.setDoubleClickFitView}
+              autoCheckUpdate={settings.autoCheckUpdate}
+              onAutoCheckUpdateChange={settings.setAutoCheckUpdate}
+              maxConcurrentRuns={settings.maxConcurrentRuns}
+              onMaxConcurrentRunsChange={settings.setMaxConcurrentRuns}
+              logRetentionDays={settings.logRetentionDays}
+              onLogRetentionDaysChange={settings.setLogRetentionDays}
+              autoShowLogPanel={settings.autoShowLogPanel}
+              onAutoShowLogPanelChange={settings.setAutoShowLogPanel}
+              onOpenLogsDir={handleOpenLogsDir}
+              onResetOnboarding={onboarding.reset}
+              shortcuts={shortcutsUi.shortcuts}
+              onShortcutChange={shortcutsUi.setShortcut}
+              onResetShortcuts={shortcutsUi.resetShortcuts}
+              onSave={handleSaveSettings}
+              aiConfig={aiConfig}
+              onAIConfigChange={handleAIConfigChange}
+              showToast={showToast}
+            />
+
+            <UpdateDialog
+              isOpen={ui.showUpdateDialog}
+              onClose={() => ui.setShowUpdateDialog(false)}
+              updateInfo={updater.updateInfo}
+              installForm={updater.installForm}
+              isInstalling={updater.isInstalling}
+              progress={updater.progress}
+              error={updater.error}
+              onInstall={() => void updater.install()}
+            />
+
+            {/* One-time guidance: without xan almost every command fails, so this
+              is worth interrupting for exactly once per launch. */}
+            {xanCheck.missingXan && (
+              <PluginSetupDialog
+                onClose={xanCheck.dismiss}
+                onInstalled={xanCheck.recheck}
+              />
+            )}
+
+            <ConfirmDialog
+              isOpen={ui.showRefreshDialog}
+              title={t.refreshTitle}
+              message={t.refreshMessage}
+              confirmLabel={t.historyRefresh}
+              onConfirm={() => {
+                ui.setShowRefreshDialog(false);
+                window.location.reload();
+              }}
+              onCancel={() => ui.setShowRefreshDialog(false)}
+            />
+
+            {/* Several branches - or another tab - overwriting the same output file */}
+            <ConfirmDialog
+              isOpen={overwriteConfirm !== null}
+              title={
+                overwriteConfirm?.reason === "crossTab"
+                  ? t.crossTabOverwriteTitle
+                  : t.branchOverwriteTitle
+              }
+              message={
+                overwriteConfirm
+                  ? overwriteConfirm.reason === "crossTab"
+                    ? t.crossTabOverwriteMessage
+                        .replace("{name}", overwriteConfirm.otherTabName ?? "")
+                        .replace("{path}", overwriteConfirm.outputPath)
+                    : t.branchOverwriteMessage.replace(
+                        "{count}",
+                        String(overwriteConfirm.branchCount),
+                      )
+                  : ""
+              }
+              detail={
+                overwriteConfirm?.reason === "crossTab"
+                  ? undefined
+                  : overwriteConfirm?.outputPath
+              }
+              confirmLabel={t.overwrite}
+              onConfirm={() => void confirmOverwriteExecution()}
+              onCancel={cancelOverwriteExecution}
+            />
+
+            <PipelineTemplateDialog
+              isOpen={showTemplateDialog}
+              onClose={() => dialogs.close("templates")}
+              templates={templateStore.templates}
+              canSave={currentPipelineLength > 0}
+              currentStepCount={currentPipelineLength}
+              defaultName={tabsHook.getCurrentTab()?.name || "Pipeline"}
+              onSave={(name, description) =>
+                void handleUseOrSaveTemplate(name, description)
+              }
+              onApply={(id) => void handleApplyTemplate(id)}
+              onRename={(id, name, description) =>
+                void handleRenameTemplate(id, name, description)
+              }
+              onDelete={(id) => {
+                const tpl = templateStore.templates.find((t) => t.id === id);
+                if (tpl) setTemplateToDelete(tpl);
+              }}
+              onExport={(id) => void handleExportTemplate(id)}
+              onImport={() => void handleImportTemplate()}
+            />
+
+            <ConfirmDialog
+              isOpen={templateToDelete !== null}
+              title={t.confirmDeleteTemplate}
+              message={t.confirmDeleteTemplateBody}
+              detail={templateToDelete?.name}
+              tone="danger"
+              confirmLabel={t.templateDelete}
+              onConfirm={confirmDeleteTemplate}
+              onCancel={() => setTemplateToDelete(null)}
+            />
+
+            <CsvDiffDialog
+              isOpen={ui.showCsvDiff}
+              onClose={() => ui.setShowCsvDiff(false)}
+              defaultDelimiter={settings.defaultDelimiter}
+              initialFileA={ui.csvDiffInitialFileA}
+              onShowToast={showToast}
+            />
+
+            <CsvEncodingDialog
+              isOpen={ui.showCsvEncoding}
+              onClose={() => ui.setShowCsvEncoding(false)}
+              initialInputFile={ui.csvEncodingInitialInput}
+              onShowToast={showToast}
+            />
+
+            <SeparateCSVDialog
+              isOpen={ui.showSeparateCsv}
+              onClose={() => ui.setShowSeparateCsv(false)}
+              initialInputFile={ui.separateCsvInitialInput}
+              defaultDelimiter={settings.defaultDelimiter}
+              onDefaultDelimiterChange={settings.setDefaultDelimiter}
+              onShowToast={showToast}
+            />
+
+            <CleanCharsDialog
+              isOpen={ui.showCleanChars}
+              onClose={() => ui.setShowCleanChars(false)}
+              initialInputFile={ui.cleanCharsInitialInput}
+              onShowToast={showToast}
+            />
+
+            <SplitLinesDialog
+              isOpen={ui.showSplitLines}
+              onClose={() => ui.setShowSplitLines(false)}
+              initialInputFile={ui.splitLinesInitialInput}
+              onShowToast={showToast}
+            />
+
+            <EnumerateByGroupDialog
+              isOpen={ui.showEnumerateByGroup}
+              onClose={() => ui.setShowEnumerateByGroup(false)}
+              initialInputFile={ui.enumerateByGroupInitialInput}
+              defaultDelimiter={settings.defaultDelimiter}
+              onShowToast={showToast}
+            />
+
+            <CsvToExcelDialog
+              isOpen={ui.showCsvToExcel}
+              onClose={() => ui.setShowCsvToExcel(false)}
+              initialInputFile={ui.csvToExcelInitialInput}
+              defaultDelimiter={settings.defaultDelimiter}
+              onShowToast={showToast}
+            />
+
+            {/* Excel multi-file merge (design 025) */}
+            <MergeExcelDialog
+              isOpen={ui.showMergeExcel}
+              onClose={() => ui.setShowMergeExcel(false)}
+              initialInputFile={ui.mergeExcelInitialInput}
+              onShowToast={showToast}
+            />
+
+            {/* .duckdb table picker (design 024) */}
+            {duckdbTableDialog && (
+              <DuckdbTableDialog
+                filePath={duckdbTableDialog.filePath}
+                tables={duckdbTableDialog.tables}
+                onPick={(table) => resolveDuckdbTable(table)}
+                onClose={() => resolveDuckdbTable(null)}
+              />
+            )}
+
+            <AIPanel
+              isVisible={ui.showAIPanel}
+              onClose={() => {
+                ui.setShowAIPanel(false);
+                setAiHistoryOpen(false);
+              }}
+              historyOpen={aiHistoryOpen}
+              onHistoryOpenChange={setAiHistoryOpen}
+              context={{
+                headers: tabsHook.getCurrentTab()?.headers || [],
+                pipelineSteps: tabsHook.getCurrentPipeline().length,
+                inputFile: tabsHook.getCurrentTab()?.inputFile,
+              }}
+              onAddCommand={handleCommandClick}
+              onAddCommands={handleCommandsClick}
+            />
+
+            {variablePrompt && (
+              <VariableValuesDialog
+                prompt={variablePrompt}
+                onConfirm={confirmVariables}
+                onCancel={cancelVariables}
+              />
+            )}
+          </div>
+        }
+      </>
     </ToolRunProvider>
   );
 }

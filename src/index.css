@@ -1130,3 +1130,42 @@ html[data-window-maximized="true"] .window-resize-handle {
 .canvas-pan-tool .react-flow__pane.dragging {
   cursor: grabbing;
 }
+
+/* --- Result ledger (design 084) ---
+   The bottom dock's result table. One strong rule under the head, hairlines
+   between rows, no vertical rules: a grid of boxes reads as a spreadsheet,
+   ruled rows read as a statement. `--border-strong` is not a theme token here,
+   so the head rule is an ink mix (same trick as `.version-rail`). */
+.result-ledger th {
+  border-bottom: 1px solid color-mix(in oklab, var(--foreground) 22%, transparent);
+}
+.result-ledger td {
+  border-bottom: 1px solid var(--border-soft);
+}
+.result-ledger tbody tr:last-child td {
+  border-bottom: 0;
+}
+.result-ledger tbody tr:hover td {
+  background-color: color-mix(in oklab, var(--foreground) 4%, transparent);
+}
+
+/* Filter chips inside the dock's header row (design 084): when the dock is
+   narrow (AI panel open) they scroll instead of squeezing — every chip keeps
+   its full label, and a 2px bar says there is more to the right. */
+.log-filter-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in oklab, var(--foreground) 22%, transparent) transparent;
+}
+.log-filter-scroll::-webkit-scrollbar {
+  height: 2px;
+}
+.log-filter-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.log-filter-fade {
+  mask-image: linear-gradient(to right, #000 calc(100% - 20px), transparent);
+}
+.log-filter-scroll::-webkit-scrollbar-thumb {
+  background: color-mix(in oklab, var(--foreground) 22%, transparent);
+  border-radius: 2px;
+}

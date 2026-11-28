@@ -17,6 +17,7 @@ interface KeyboardShortcutCallbacks {
   onRedo: () => void;
   onExecute: () => void;
   onLogs: () => void;
+  onResults: () => void;
   onAI: () => void;
   onCommandPalette: () => void;
   onOpenTemplates: () => void;
@@ -109,6 +110,9 @@ export function useKeyboardShortcuts(
           break;
         case "toggleLogs":
           cb.onLogs();
+          break;
+        case "toggleResults":
+          cb.onResults();
           break;
         case "toggleAI":
           cb.onAI();

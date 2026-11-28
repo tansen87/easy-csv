@@ -31,6 +31,7 @@ const LABEL_KEYS: Record<ShortcutActionId, SettingsTextKey> = {
   openTemplates: "newFromTemplate",
   commandPalette: "commandPalette",
   toggleLogs: "logPanel",
+  toggleResults: "results",
   toggleAI: "ai",
 };
 
