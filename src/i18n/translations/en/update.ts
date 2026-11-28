@@ -29,6 +29,5 @@ export const enUpdate = {
 
   updateSection: "Check for updates",
   settingsAutoCheckUpdate: "Auto-check for updates",
-  settingsAutoCheckUpdateDesc:
-    "When enabled, checks silently in the background and only flags new versions in the toolbar; it never installs anything by itself",
+  settingsAutoCheckUpdateDesc: "When enabled, silently check for updates",
 };

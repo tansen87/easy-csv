@@ -28,9 +28,8 @@ export const enSettings = {
 
   // Directory navigation
   settingsSearchPlaceholder: "Search settings",
-  settingsSearchEmpty: "No settings match \u201c{query}\u201d",
-  settingsSearchEmptyHint:
-    "Try \u201ctray\u201d, \u201cdark\u201d or \u201cconcurrency\u201d",
+  settingsSearchEmpty: "No settings match [{query}]",
+  settingsSearchEmptyHint: "Try [ctray], [dark] or [concurrency]",
   settingsSearchResults: "{count} results",
   settingsNavHintClear: "Esc clears the search",
   settingsGroupAppearance: "Appearance",
@@ -39,7 +38,7 @@ export const enSettings = {
   settingsGroupShortcuts: "Shortcuts",
   shortcutRecording: "Press keys",
   shortcutNeedsModifier: "Needs Ctrl / ⌘ or Alt",
-  shortcutConflict: "Conflicts with “{action}”",
+  shortcutConflict: "Conflicts with {action}",
   shortcutResetAll: "Reset all",
   settingsGroupUpdate: "Updates",
   settingsGroupRun: "Runs",
@@ -47,13 +46,13 @@ export const enSettings = {
   settingsGroupMaintenance: "Maintenance",
   logRetentionDays: "Log retention",
   logRetentionDaysDesc:
-    "One JSONL log file per day; files older than the retention are pruned at startup. 0 keeps logs in memory only.",
+    "One log file per day; files older than the retention are pruned at startup. 0 keeps logs in memory only.",
   logOpenDirAction: "Open log folder",
   logOpenDirDesc:
     "Logs live under data/logs, one easy-csv-YYYY-MM-DD.log file per day",
   autoShowLogPanel: "Auto-open logs",
   autoShowLogPanelDesc:
-    "Open the log drawer automatically when a run starts; when off, open it from the completion toast",
+    "When enabled, open the log drawer automatically when a run starts",
   settingsClear: "Clear",
   settingsExpand: "Expand",
   settingsCollapse: "Collapse",
@@ -67,7 +66,8 @@ export const enSettings = {
   accentGraphite: "Graphite",
   accentPink: "Rose",
   accentPurple: "Violet",
-  settingsLiveNote: "Changes take effect and are written to the local configuration after saving",
+  settingsLiveNote:
+    "Changes take effect and are written to the local configuration after saving",
   settingsDecrease: "Decrease",
   settingsIncrease: "Increase",
   settingsShowKey: "Show key",
@@ -75,8 +75,7 @@ export const enSettings = {
   settingsShowAgain: "Show again",
   clearExecutionHistoryDesc: "Delete every execution history record",
   aiClearConversationsDesc: "Delete your conversations with the AI",
-  aiClearFeedbackDesc:
-    "Delete the \u201chelpful / not helpful\u201d feedback records",
+  aiClearFeedbackDesc: "Delete the [chelpful / not helpful] feedback records",
   aiClearCorrectionsDesc: "Delete the AI correction rules",
   aiCustomProviderSettingsDesc:
     "Name, base URL and model list used by a custom provider",

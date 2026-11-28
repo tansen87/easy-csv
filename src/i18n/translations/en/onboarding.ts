@@ -26,7 +26,7 @@ export const enOnboarding = {
     "Press Ctrl F, click search → drop empty amounts",
   onboardingDemoRevealAction2: "Click dedup → drop exactly duplicated rows",
   onboardingDemoRevealAction3: "Click groupby → total the amount by region",
-  onboardingDemoRevealRunning: "Three steps built - running it…",
+  onboardingDemoRevealRunning: "Three steps built - running it",
   onboardingDemoRevealReady:
     "All three are on the canvas - click Run to see the result",
   onboardingDemoRevealNext: "Next",
@@ -36,7 +36,7 @@ export const enOnboarding = {
   // Settings
   onboardingReset: "Onboarding",
   onboardingResetDesc:
-    "Clears the “intro seen” flag so the guide reappears the next time you open a file.",
+    "Clears the [intro seen] flag so the guide reappears the next time you open a file.",
 
   // Template library
   myTemplatesGroup: "Mine",

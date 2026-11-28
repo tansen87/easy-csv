@@ -42,12 +42,12 @@ export const zhSettings = {
   settingsGroupMaintenance: "维护",
   logRetentionDays: "日志保留天数",
   logRetentionDaysDesc:
-    "每天一个 JSONL 日志文件, 超过保留天数在启动时清理; 0 = 只存内存, 不写文件",
+    "每天一个日志文件, 超过保留天数在启动时清理; 0 = 只存内存, 不写文件",
   logOpenDirAction: "打开日志目录",
   logOpenDirDesc:
     "日志保存在 data/logs 下, 每天一个 easy-csv-YYYY-MM-DD.log 文件",
   autoShowLogPanel: "自动弹出日志",
-  autoShowLogPanelDesc: "执行开始时自动打开日志抽屉; 关闭时通过完成提示的「查看日志」打开",
+  autoShowLogPanelDesc: "启用后, 运行开始时自动打开日志抽屉",
   settingsClear: "清除",
   settingsExpand: "展开",
   settingsCollapse: "收起",

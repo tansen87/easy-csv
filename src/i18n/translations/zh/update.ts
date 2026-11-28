@@ -22,6 +22,5 @@ export const zhUpdate = {
 
   updateSection: "检查更新",
   settingsAutoCheckUpdate: "自动检查更新",
-  settingsAutoCheckUpdateDesc:
-    "启用后, 静默检查更新, 仅在发现新版本时在工具栏提示, 不会自动安装",
+  settingsAutoCheckUpdateDesc: "启用后, 静默检查更新",
 };
