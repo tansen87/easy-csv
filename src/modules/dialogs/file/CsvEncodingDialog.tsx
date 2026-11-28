@@ -287,7 +287,7 @@ export function CsvEncodingDialog({
         role="dialog"
         aria-modal="true"
         tabIndex={-1}
-        className="relative bg-card border border-border/50 rounded-lg shadow-xl w-full max-w-2xl h-[85vh] flex flex-col overflow-hidden outline-none"
+        className="relative bg-card border border-border/50 rounded-lg shadow-xl w-full max-w-4xl h-[85vh] flex flex-col overflow-hidden outline-none"
         onClick={(e) => e.stopPropagation()}
         onContextMenu={(e) => e.preventDefault()}
       >
